@@ -3,7 +3,7 @@
 
 # Netzwerkplan
 
-**Aktuelle Version: 1.6.1** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.7.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -157,6 +157,15 @@ solange gültiges JSON erhalten bleibt.
   (Farbe/Stärke/Bezeichnung im Klick auf die Linie einstellbar).
   Bei Switch/Router/Patchfeld lassen sich die Ports über die Buttons „⟳"
   (Seite drehen) und „⇋" (Reihenfolge spiegeln) am Element ausrichten.
+  Doppelklick auf einen einzelnen Port vergibt einen eigenen Portnamen
+  (zusätzlich zur Nummer); alle Portnamen lassen sich auch gesammelt im
+  Element-Dialog bearbeiten.
+- **Mehrere Elemente gemeinsam verschieben:** Im Bearbeitungsmodus bei
+  gehaltener Umschalttaste (Shift) auf leerer Fläche ziehen, um einen
+  Auswahlrahmen aufzuziehen. Alle berührten Elemente werden markiert
+  (orange Umrandung) – anschließend an einem davon ziehen, um alle
+  markierten Elemente parallel zu verschieben. Klick auf leere Fläche
+  ohne Shift oder Escape hebt die Auswahl wieder auf.
 - **Leitungen bearbeiten:** Jede Leitung zeigt im Bearbeitungsmodus einen
   eigenen „✎"-Button (wie an den Elementen), der ein Menü öffnet, um die
   Bezeichnung zu ändern, die Farbe anzupassen, einen Wegpunkt an dieser

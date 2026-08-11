@@ -51,6 +51,13 @@ function getPortSide(el) {
 function getPortMirror(el) {
   return !!el.port_mirror;
 }
+function getPortName(el, index) {
+  const arr = el.port_names;
+  if (Array.isArray(arr) && typeof arr[index] === "string" && arr[index].trim()) {
+    return arr[index].trim();
+  }
+  return null;
+}
 
 let config = null;
 let mode = "edit"; // "edit" | "use"
@@ -60,6 +67,9 @@ const ZOOM_MIN = 0.25, ZOOM_MAX = 2.5;
 
 let isPanning = false, panStart = { x: 0, y: 0 }, panOrigin = { x: 0, y: 0 };
 let draggingEl = null, dragOffset = { x: 0, y: 0 };
+let dragGroup = null; // { ids, nodes, startPositions, startPointerCanvas } | null
+let selectedElementIds = new Set();
+let marqueeState = null; // { startX, startY, el } | null
 let draggingWaypoint = null; // { connId, index } | null
 let draggingLabel = null; // { connId } | null
 let connectMode = false, connectFrom = null; // connectFrom = { id, port } | { id, port: null }
@@ -178,6 +188,14 @@ function applyMode() {
     connectMode = false;
     viewport.classList.remove("connect-mode");
     connectFrom = null;
+    if (selectedElementIds.size > 0) {
+      selectedElementIds.clear();
+    }
+    if (marqueeState) {
+      marqueeState.el.remove();
+      marqueeState = null;
+    }
+    dragGroup = null;
   }
   setStatus(mode === "edit"
     ? "Bearbeitungsmodus – Elemente verschieben, verbinden und bearbeiten."
@@ -240,10 +258,22 @@ $("#btnZoomReset").addEventListener("click", () => {
   saveViewDebounced();
 });
 
-/* Pan bei Klick auf leere Flaeche */
+/* Pan bei Klick auf leere Flaeche – bei gehaltener Umschalttaste (Shift)
+   wird stattdessen ein Auswahlrahmen aufgezogen (Mehrfachauswahl). */
 viewport.addEventListener("mousedown", (e) => {
   if (e.target !== viewport && e.target !== canvas) return;
   if (connectMode) return;
+
+  if (mode === "edit" && e.shiftKey) {
+    startMarquee(e);
+    return;
+  }
+
+  if (selectedElementIds.size > 0) {
+    elementLayer.querySelectorAll(".net-element.multi-selected").forEach((n) => n.classList.remove("multi-selected"));
+    selectedElementIds.clear();
+  }
+
   isPanning = true;
   panStart = { x: e.clientX, y: e.clientY };
   panOrigin = { x: panX, y: panY };
@@ -265,6 +295,10 @@ window.addEventListener("mousemove", (e) => {
   if (draggingLabel) {
     moveDraggingLabel(e);
   }
+  if (marqueeState) {
+    const rect = viewport.getBoundingClientRect();
+    updateMarqueeRect(marqueeState.startX, marqueeState.startY, e.clientX - rect.left, e.clientY - rect.top);
+  }
 });
 
 window.addEventListener("mouseup", () => {
@@ -284,7 +318,54 @@ window.addEventListener("mouseup", () => {
     draggingLabel = null;
     persistConfig();
   }
+  if (marqueeState) {
+    finishMarquee();
+  }
 });
+
+/* ------------------------------------------------------------------ */
+/* Rahmen-Mehrfachauswahl (Shift + Ziehen auf leerer Flaeche)          */
+/* ------------------------------------------------------------------ */
+
+function startMarquee(e) {
+  const rect = viewport.getBoundingClientRect();
+  const el = document.createElement("div");
+  el.className = "marquee-rect";
+  viewport.appendChild(el);
+  marqueeState = {
+    startX: e.clientX - rect.left,
+    startY: e.clientY - rect.top,
+    el,
+  };
+  updateMarqueeRect(marqueeState.startX, marqueeState.startY, marqueeState.startX, marqueeState.startY);
+}
+
+function updateMarqueeRect(x1, y1, x2, y2) {
+  const left = Math.min(x1, x2), top = Math.min(y1, y2);
+  const w = Math.abs(x2 - x1), h = Math.abs(y2 - y1);
+  marqueeState.el.style.left = left + "px";
+  marqueeState.el.style.top = top + "px";
+  marqueeState.el.style.width = w + "px";
+  marqueeState.el.style.height = h + "px";
+}
+
+function finishMarquee() {
+  const box = marqueeState.el.getBoundingClientRect();
+  marqueeState.el.remove();
+  const ids = new Set();
+  elementLayer.querySelectorAll(".net-element").forEach((node) => {
+    const r = node.getBoundingClientRect();
+    const intersects = !(r.right < box.left || r.left > box.right || r.bottom < box.top || r.top > box.bottom);
+    if (intersects) ids.add(node.dataset.id);
+  });
+  marqueeState = null;
+  selectedElementIds = ids;
+  renderElements();
+  renderConnections();
+  setStatus(ids.size > 0
+    ? `${ids.size} Element(e) ausgewaehlt – an einem davon ziehen, um alle gemeinsam zu verschieben.`
+    : "Keine Elemente im Auswahlrahmen.");
+}
 
 function moveDraggingWaypoint(e) {
   const conn = config.connections.find((c) => c.id === draggingWaypoint.connId);
@@ -337,6 +418,7 @@ function buildElementNode(el) {
   node.dataset.id = el.id;
   node.style.left = el.x + "px";
   node.style.top = el.y + "px";
+  if (selectedElementIds.has(el.id)) node.classList.add("multi-selected");
 
   const hasLinks = Array.isArray(el.links) && el.links.filter(Boolean).length > 0;
   const portCount = getPortCount(el);
@@ -428,8 +510,10 @@ function buildElementNode(el) {
       const dot = document.createElement("div");
       dot.className = "port-dot";
       dot.dataset.port = String(i);
-      dot.title = "Port " + (i + 1);
+      const customName = getPortName(el, i);
+      dot.title = customName ? `${customName} (Port ${i + 1})` : "Port " + (i + 1) + " – Doppelklick: Namen vergeben";
       dot.textContent = String(i + 1);
+      if (customName) dot.classList.add("port-named");
       dot.addEventListener("mousedown", (e) => e.stopPropagation());
       dot.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -437,6 +521,14 @@ function buildElementNode(el) {
           handleConnectPick(el.id, i);
         }
       });
+      if (mode === "edit") {
+        dot.addEventListener("dblclick", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (connectMode) return;
+          openPortNameEditor(el, i, e.clientX, e.clientY);
+        });
+      }
       portsBar.appendChild(dot);
     }
     node.appendChild(portsBar);
@@ -454,6 +546,69 @@ function buildElementNode(el) {
 
 function sideLabel(side) {
   return { bottom: "unten", top: "oben", left: "links", right: "rechts" }[side] || side;
+}
+
+/* ------------------------------------------------------------------ */
+/* Portnamen per Doppelklick auf einen Port direkt vergeben            */
+/* ------------------------------------------------------------------ */
+
+let portNameInputEl = null;
+
+function openPortNameEditor(el, portIndex, clientX, clientY) {
+  closePortNameEditor();
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "port-name-input";
+  input.maxLength = 40;
+  input.placeholder = "Name fuer Port " + (portIndex + 1);
+  input.value = getPortName(el, portIndex) || "";
+
+  document.body.appendChild(input);
+  const w = 180;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const left = Math.min(Math.max(8, clientX - w / 2), vw - w - 8);
+  const top = Math.min(Math.max(8, clientY - 34), vh - 40);
+  input.style.left = left + "px";
+  input.style.top = top + "px";
+  input.style.width = w + "px";
+
+  input.focus();
+  input.select();
+
+  let done = false;
+  const commit = () => {
+    if (done) return;
+    done = true;
+    if (!Array.isArray(el.port_names)) el.port_names = [];
+    el.port_names[portIndex] = input.value.trim();
+    closePortNameEditor();
+    renderElements();
+    renderConnections();
+    persistConfig();
+  };
+  const cancel = () => {
+    if (done) return;
+    done = true;
+    closePortNameEditor();
+  };
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); commit(); }
+    else if (e.key === "Escape") { e.preventDefault(); cancel(); }
+  });
+  input.addEventListener("blur", commit);
+  input.addEventListener("mousedown", (e) => e.stopPropagation());
+  input.addEventListener("click", (e) => e.stopPropagation());
+
+  portNameInputEl = input;
+}
+
+function closePortNameEditor() {
+  if (portNameInputEl) {
+    portNameInputEl.remove();
+    portNameInputEl = null;
+  }
 }
 
 function rotatePorts(id) {
@@ -551,16 +706,48 @@ function snap(value) {
 function startDraggingElement(id, node, e) {
   const el = config.elements.find((x) => x.id === id);
   if (!el) return;
+
+  const isGroupDrag = selectedElementIds.size > 1 && selectedElementIds.has(id);
+
+  if (isGroupDrag) {
+    const nodes = {};
+    const startPositions = {};
+    selectedElementIds.forEach((gid) => {
+      const gEl = config.elements.find((x) => x.id === gid);
+      const gNode = elementLayer.querySelector(`.net-element[data-id="${gid}"]`);
+      if (gEl && gNode) {
+        nodes[gid] = gNode;
+        startPositions[gid] = { x: gEl.x, y: gEl.y };
+        gNode.classList.add("dragging");
+      }
+    });
+    dragGroup = {
+      ids: Object.keys(nodes),
+      nodes,
+      startPositions,
+      startPointerCanvas: clientToCanvas(e.clientX, e.clientY),
+    };
+  } else {
+    if (selectedElementIds.size > 0) {
+      elementLayer.querySelectorAll(".net-element.multi-selected").forEach((n) => n.classList.remove("multi-selected"));
+      selectedElementIds.clear();
+    }
+    dragGroup = null;
+    node.classList.add("dragging");
+  }
+
   draggingEl = { id, node };
   const rect = node.getBoundingClientRect();
   dragOffset.x = (e.clientX - rect.left) / scale;
   dragOffset.y = (e.clientY - rect.top) / scale;
-  node.classList.add("dragging");
-  node.classList.add("selected");
   e.stopPropagation();
 }
 
 function moveDraggingElement(e) {
+  if (dragGroup) {
+    moveDragGroup(e);
+    return;
+  }
   const el = config.elements.find((x) => x.id === draggingEl.id);
   if (!el) return;
   const rect = viewport.getBoundingClientRect();
@@ -573,7 +760,42 @@ function moveDraggingElement(e) {
   renderConnections();
 }
 
+function moveDragGroup(e) {
+  const pt = clientToCanvas(e.clientX, e.clientY);
+  const dx = pt.x - dragGroup.startPointerCanvas.x;
+  const dy = pt.y - dragGroup.startPointerCanvas.y;
+  dragGroup.ids.forEach((gid) => {
+    const gEl = config.elements.find((x) => x.id === gid);
+    const start = dragGroup.startPositions[gid];
+    const node = dragGroup.nodes[gid];
+    if (!gEl || !start || !node) return;
+    gEl.x = Math.max(0, start.x + dx);
+    gEl.y = Math.max(0, start.y + dy);
+    node.style.left = gEl.x + "px";
+    node.style.top = gEl.y + "px";
+  });
+  renderConnections();
+}
+
 function finishDraggingElement() {
+  if (dragGroup) {
+    dragGroup.ids.forEach((gid) => {
+      const gEl = config.elements.find((x) => x.id === gid);
+      const node = dragGroup.nodes[gid];
+      if (!gEl || !node) return;
+      gEl.x = snap(gEl.x);
+      gEl.y = snap(gEl.y);
+      node.style.left = gEl.x + "px";
+      node.style.top = gEl.y + "px";
+      node.classList.remove("dragging");
+    });
+    dragGroup = null;
+    draggingEl = null;
+    renderConnections();
+    persistConfig();
+    return;
+  }
+
   const el = config.elements.find((x) => x.id === draggingEl.id);
   if (el) {
     el.x = snap(el.x);
@@ -587,16 +809,58 @@ function finishDraggingElement() {
   persistConfig();
 }
 
+let pendingPortNames = [];
+
 function updatePortsFieldVisibility() {
   const type = $("#fType").value;
   const row = $("#fPortsRow");
+  const namesRow = $("#fPortNamesRow");
   if (hasPorts(type)) {
     row.classList.remove("hidden-field");
+    namesRow.classList.remove("hidden-field");
     if (!$("#fPorts").value) $("#fPorts").value = DEFAULT_PORTS[type];
+    resizePendingPortNames();
+    renderPortNameInputs();
   } else {
     row.classList.add("hidden-field");
+    namesRow.classList.add("hidden-field");
   }
 }
+
+function resizePendingPortNames() {
+  let n = parseInt($("#fPorts").value, 10);
+  if (!Number.isFinite(n)) n = pendingPortNames.length || DEFAULT_PORTS[$("#fType").value] || 1;
+  n = Math.min(PORT_MAX, Math.max(PORT_MIN, n));
+  const next = [];
+  for (let i = 0; i < n; i++) next.push(pendingPortNames[i] || "");
+  pendingPortNames = next;
+}
+
+function renderPortNameInputs() {
+  const list = $("#fPortNamesList");
+  list.innerHTML = "";
+  pendingPortNames.forEach((name, i) => {
+    const row = document.createElement("div");
+    row.className = "port-name-row";
+    const idx = document.createElement("span");
+    idx.className = "port-name-idx";
+    idx.textContent = "P" + (i + 1);
+    const input = document.createElement("input");
+    input.type = "text";
+    input.maxLength = 40;
+    input.placeholder = "Port " + (i + 1);
+    input.value = name;
+    input.addEventListener("input", () => { pendingPortNames[i] = input.value; });
+    row.appendChild(idx);
+    row.appendChild(input);
+    list.appendChild(row);
+  });
+}
+
+$("#fPorts").addEventListener("input", () => {
+  resizePendingPortNames();
+  renderPortNameInputs();
+});
 
 function openElementModal(id) {
   editingElementId = id;
@@ -608,6 +872,9 @@ function openElementModal(id) {
   $("#fType").value = el.type;
   $("#fLinks").value = (el.links || []).join("\n");
   $("#fPorts").value = hasPorts(el.type) ? getPortCount(el) : "";
+  pendingPortNames = hasPorts(el.type)
+    ? Array.from({ length: getPortCount(el) }, (_, i) => (el.port_names && el.port_names[i]) || "")
+    : [];
   updatePortsFieldVisibility();
   $("#elementModal").classList.remove("hidden");
   $("#fName").focus();
@@ -630,6 +897,8 @@ $("#fSave").addEventListener("click", () => {
     if (!Number.isFinite(n)) n = DEFAULT_PORTS[el.type];
     n = Math.min(PORT_MAX, Math.max(PORT_MIN, n));
     el.ports = n;
+    resizePendingPortNames();
+    el.port_names = pendingPortNames.slice(0, n).map((s) => s.trim());
     // Verbindungen, die auf nun nicht mehr existierende Ports zeigen, kappen
     // (Verbindung bleibt bestehen, dockt dann am Element-Mittelpunkt an).
     config.connections.forEach((c) => {
@@ -642,6 +911,7 @@ $("#fSave").addEventListener("click", () => {
     });
   } else {
     delete el.ports;
+    delete el.port_names;
   }
 
   $("#elementModal").classList.add("hidden");
@@ -1344,6 +1614,15 @@ function bindGlobalEvents() {
       $("#connModal").classList.add("hidden");
       $("#linksModal").classList.add("hidden");
       if (connCtxMenuEl) closeConnContextMenu();
+      closePortNameEditor();
+      if (marqueeState) {
+        marqueeState.el.remove();
+        marqueeState = null;
+      }
+      if (selectedElementIds.size > 0) {
+        elementLayer.querySelectorAll(".net-element.multi-selected").forEach((n) => n.classList.remove("multi-selected"));
+        selectedElementIds.clear();
+      }
       if (connectMode) {
         connectMode = false;
         connectFrom = null;

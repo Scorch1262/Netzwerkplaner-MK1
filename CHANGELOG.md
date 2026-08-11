@@ -2,6 +2,31 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.7.0] – Portnamen, Rahmen-Mehrfachauswahl mit Gruppen-Verschieben
+
+- **Neu – Portnamen:** Einzelne Ports von Switch/Router/Patchfeld können
+  jetzt zusätzlich zur Portnummer einen eigenen Namen bekommen (z. B.
+  „Uplink WAN", „Server-Rack A"). Zwei Wege dafür:
+  - Schnell: Doppelklick direkt auf einen Port öffnet ein kleines
+    Eingabefeld an der Klickposition.
+  - Vollständig: Der Element-Dialog (✎) zeigt bei Switch/Router/Patchfeld
+    jetzt eine scrollbare Liste mit einem Namensfeld je Port, die sich
+    automatisch an die eingestellte Portanzahl anpasst.
+  - Benannte Ports sind an einer farbigen Unterkante zu erkennen; der volle
+    Name erscheint als Tooltip beim Draufzeigen.
+- **Neu – Rahmen-Mehrfachauswahl:** Im Bearbeitungsmodus bei gehaltener
+  Umschalttaste (Shift) auf leerer Fläche ziehen, um einen Auswahlrahmen
+  aufzuziehen. Alle Elemente, die der Rahmen berührt, werden markiert
+  (orange Umrandung). Anschließend an einem der markierten Elemente
+  ziehen, um **alle markierten Elemente parallel/gemeinsam zu
+  verschieben** (Rasterfang gilt weiterhin für jedes Element einzeln).
+  Klick auf leere Fläche ohne Shift hebt die Auswahl wieder auf, ebenso
+  die Escape-Taste.
+- `config.json`: Elemente mit Ports erhalten optional das Feld
+  `port_names` (Liste von Zeichenketten, indexgleich zu den Ports).
+  Bestehende Konfigurationen ohne dieses Feld funktionieren unverändert
+  weiter.
+
 ## [1.6.1] – Grundlegender Bugfix: Leitungen/Buttons waren gar nicht klickbar
 
 - **Ursache gefunden und behoben:** Die Element-Ebene (`#elementLayer`)
