@@ -221,7 +221,6 @@ html, body {
 .net-element {
   position: absolute;
   width: 148px;
-  min-height: 76px;
   background: linear-gradient(160deg, var(--bg-3), var(--bg-2));
   border: 1px solid var(--border);
   border-radius: 5px;
@@ -296,6 +295,40 @@ html, body {
 .el-link-btn:hover { background: var(--accent-dim); color: #001318; border-color: var(--accent); }
 .el-link-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
+.ports-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px dashed var(--border-soft);
+}
+.port-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  user-select: none;
+}
+.edit-mode.connect-mode-active .port-dot,
+#viewport.connect-mode .port-dot { cursor: crosshair; }
+.port-dot:hover { border-color: var(--accent); color: var(--accent); }
+.port-dot.port-picked {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: #1a0d02;
+  box-shadow: 0 0 8px rgba(255,138,61,0.6);
+}
+
 .el-edit-btn {
   position: absolute;
   top: 4px;
@@ -363,6 +396,7 @@ html, body {
   z-index: 100;
 }
 .modal-overlay.hidden { display: none; }
+.hidden-field { display: none !important; }
 
 .modal {
   width: 380px;

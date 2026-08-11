@@ -24,6 +24,25 @@ const CONNECTION_COLORS = [
 const DEFAULT_ELEMENT_W = 148;
 const DEFAULT_ELEMENT_H = 76;
 
+/* Elementtypen mit eigenen Anschluss-Ports (je Port ein Andockpunkt fuer
+   Verbindungsleitungen). Wert = Standard-Portanzahl bei neuen Elementen. */
+const DEFAULT_PORTS = {
+  switch: 8,
+  router: 4,
+  patchpanel: 24,
+};
+const PORT_MIN = 1, PORT_MAX = 48;
+const PORT_DOT = 14, PORT_GAP = 5;
+
+function hasPorts(type) {
+  return Object.prototype.hasOwnProperty.call(DEFAULT_PORTS, type);
+}
+function getPortCount(el) {
+  if (!hasPorts(el.type)) return 0;
+  const n = parseInt(el.ports, 10);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_PORTS[el.type];
+}
+
 let config = null;
 let mode = "edit"; // "edit" | "use"
 
@@ -32,10 +51,14 @@ const ZOOM_MIN = 0.25, ZOOM_MAX = 2.5;
 
 let isPanning = false, panStart = { x: 0, y: 0 }, panOrigin = { x: 0, y: 0 };
 let draggingEl = null, dragOffset = { x: 0, y: 0 };
-let connectMode = false, connectFrom = null;
+let connectMode = false, connectFrom = null; // connectFrom = { id, port } | { id, port: null }
 let editingElementId = null;
 let editingConnId = null;
 let selectedColor = CONNECTION_COLORS[0];
+
+/* Relative Position jedes Ports innerhalb seines Elements (in Canvas-Pixeln,
+   unabhaengig vom Zoom). Wird nach jedem Rendern der Elemente neu berechnet. */
+let portRelOffsets = {}; // { elementId: [{x,y}, ...] }
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -249,6 +272,7 @@ function renderElements() {
   for (const el of config.elements) {
     elementLayer.appendChild(buildElementNode(el));
   }
+  computePortRelOffsets();
 }
 
 function buildElementNode(el) {
@@ -260,6 +284,7 @@ function buildElementNode(el) {
   node.style.top = el.y + "px";
 
   const hasLinks = Array.isArray(el.links) && el.links.filter(Boolean).length > 0;
+  const portCount = getPortCount(el);
 
   node.innerHTML = `
     <div class="el-head">
@@ -272,6 +297,20 @@ function buildElementNode(el) {
     <div class="el-location">${escapeHtml(el.location || "")}</div>
     <button class="el-link-btn" ${hasLinks ? "" : "disabled"}>↗ Webseite oeffnen</button>
   `;
+
+  if (portCount > 0) {
+    const portsWrap = document.createElement("div");
+    portsWrap.className = "ports-container";
+    for (let i = 0; i < portCount; i++) {
+      const dot = document.createElement("div");
+      dot.className = "port-dot";
+      dot.dataset.port = String(i);
+      dot.title = "Port " + (i + 1);
+      dot.textContent = String(i + 1);
+      portsWrap.appendChild(dot);
+    }
+    node.appendChild(portsWrap);
+  }
 
   if (mode === "edit") {
     const editBtn = document.createElement("div");
@@ -298,14 +337,44 @@ function buildElementNode(el) {
     }
   });
 
-  node.addEventListener("click", (e) => {
-    if (e.target.closest(".el-link-btn") || e.target.closest(".el-edit-btn")) return;
-    if (mode === "edit" && connectMode) {
-      handleConnectPick(el.id);
-    }
-  });
+  if (portCount > 0) {
+    /* Elemente mit Ports: Verbindungen duerfen nur an einem konkreten
+       Port-Andockpunkt gestartet/beendet werden, nicht am Element selbst. */
+    node.querySelectorAll(".port-dot").forEach((dot) => {
+      dot.addEventListener("mousedown", (e) => e.stopPropagation());
+      dot.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (mode === "edit" && connectMode) {
+          handleConnectPick(el.id, parseInt(dot.dataset.port, 10));
+        }
+      });
+    });
+  } else {
+    node.addEventListener("click", (e) => {
+      if (e.target.closest(".el-link-btn") || e.target.closest(".el-edit-btn")) return;
+      if (mode === "edit" && connectMode) {
+        handleConnectPick(el.id, null);
+      }
+    });
+  }
 
   return node;
+}
+
+/* Berechnet fuer jedes Element mit Ports die Position jedes Port-Andockpunkts
+   relativ zur linken oberen Ecke des Elements (in unskalierten Canvas-Pixeln).
+   Muss nach jedem Neu-Rendern der Elemente aufgerufen werden. */
+function computePortRelOffsets() {
+  portRelOffsets = {};
+  elementLayer.querySelectorAll(".net-element").forEach((node) => {
+    const dots = node.querySelectorAll(".port-dot");
+    if (dots.length === 0) return;
+    const id = node.dataset.id;
+    portRelOffsets[id] = Array.from(dots).map((dot) => ({
+      x: dot.offsetLeft + dot.offsetWidth / 2,
+      y: dot.offsetTop + dot.offsetHeight / 2,
+    }));
+  });
 }
 
 function escapeHtml(str) {
@@ -332,6 +401,9 @@ function addElement(type) {
     y: snap(Math.max(0, centerY)),
     links: [],
   };
+  if (hasPorts(type)) {
+    el.ports = DEFAULT_PORTS[type];
+  }
   config.elements.push(el);
   renderElements();
   renderConnections();
@@ -384,6 +456,17 @@ function finishDraggingElement() {
   persistConfig();
 }
 
+function updatePortsFieldVisibility() {
+  const type = $("#fType").value;
+  const row = $("#fPortsRow");
+  if (hasPorts(type)) {
+    row.classList.remove("hidden-field");
+    if (!$("#fPorts").value) $("#fPorts").value = DEFAULT_PORTS[type];
+  } else {
+    row.classList.add("hidden-field");
+  }
+}
+
 function openElementModal(id) {
   editingElementId = id;
   const el = config.elements.find((x) => x.id === id);
@@ -393,9 +476,13 @@ function openElementModal(id) {
   $("#fLocation").value = el.location || "";
   $("#fType").value = el.type;
   $("#fLinks").value = (el.links || []).join("\n");
+  $("#fPorts").value = hasPorts(el.type) ? getPortCount(el) : "";
+  updatePortsFieldVisibility();
   $("#elementModal").classList.remove("hidden");
   $("#fName").focus();
 }
+
+$("#fType").addEventListener("change", updatePortsFieldVisibility);
 
 $("#fCancel").addEventListener("click", () => $("#elementModal").classList.add("hidden"));
 
@@ -406,6 +493,26 @@ $("#fSave").addEventListener("click", () => {
   el.location = $("#fLocation").value.trim();
   el.type = $("#fType").value;
   el.links = $("#fLinks").value.split("\n").map((s) => s.trim()).filter(Boolean);
+
+  if (hasPorts(el.type)) {
+    let n = parseInt($("#fPorts").value, 10);
+    if (!Number.isFinite(n)) n = DEFAULT_PORTS[el.type];
+    n = Math.min(PORT_MAX, Math.max(PORT_MIN, n));
+    el.ports = n;
+    // Verbindungen, die auf nun nicht mehr existierende Ports zeigen, kappen
+    // (Verbindung bleibt bestehen, dockt dann am Element-Mittelpunkt an).
+    config.connections.forEach((c) => {
+      if (c.from === el.id && c.from_port !== null && c.from_port !== undefined && c.from_port >= n) {
+        c.from_port = null;
+      }
+      if (c.to === el.id && c.to_port !== null && c.to_port !== undefined && c.to_port >= n) {
+        c.to_port = null;
+      }
+    });
+  } else {
+    delete el.ports;
+  }
+
   $("#elementModal").classList.add("hidden");
   renderElements();
   renderConnections();
@@ -469,39 +576,58 @@ $("#btnConnectMode").addEventListener("click", () => {
   connectFrom = null;
   viewport.classList.toggle("connect-mode", connectMode);
   $("#btnConnectMode").classList.toggle("btn-primary", connectMode);
-  $$(".net-element").forEach((n) => n.classList.remove("connect-pick"));
+  clearConnectPickHighlight();
   setStatus(connectMode
-    ? "Verbindungsmodus: Erstes, dann zweites Element anklicken."
+    ? "Verbindungsmodus: Element bzw. bei Switch/Router/Patchfeld einen Port anklicken."
     : "Bereit");
 });
 
-function handleConnectPick(id) {
+function portPickNode(id, port) {
   const node = elementLayer.querySelector(`.net-element[data-id="${id}"]`);
+  if (!node) return null;
+  if (port === null || port === undefined) return node;
+  return node.querySelector(`.port-dot[data-port="${port}"]`);
+}
+
+function clearConnectPickHighlight() {
+  $$(".net-element.connect-pick").forEach((n) => n.classList.remove("connect-pick"));
+  $$(".port-dot.port-picked").forEach((n) => n.classList.remove("port-picked"));
+}
+
+function handleConnectPick(id, port) {
+  const targetNode = portPickNode(id, port);
+  if (!targetNode) return;
+
   if (!connectFrom) {
-    connectFrom = id;
-    node.classList.add("connect-pick");
-    setStatus("Zweites Element fuer die Verbindung anklicken.");
+    connectFrom = { id, port: port ?? null };
+    targetNode.classList.add(port === null || port === undefined ? "connect-pick" : "port-picked");
+    setStatus("Zweiten Anschluss / zweites Element fuer die Verbindung anklicken.");
     return;
   }
-  if (connectFrom === id) {
-    node.classList.remove("connect-pick");
+
+  // Erneuter Klick auf denselben Startpunkt -> Auswahl aufheben
+  if (connectFrom.id === id && (connectFrom.port ?? null) === (port ?? null)) {
+    clearConnectPickHighlight();
     connectFrom = null;
     return;
   }
+
   const conn = {
     id: "conn-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
-    from: connectFrom,
+    from: connectFrom.id,
     to: id,
+    from_port: connectFrom.port ?? null,
+    to_port: port ?? null,
     color: selectedColor,
     thickness: 4,
     label: "",
   };
   config.connections.push(conn);
-  $$(".net-element").forEach((n) => n.classList.remove("connect-pick"));
+  clearConnectPickHighlight();
   connectFrom = null;
   renderConnections();
   persistConfig();
-  setStatus("Verbindung erstellt. Naechste Verbindung: erstes Element anklicken.");
+  setStatus("Verbindung erstellt. Naechste Verbindung: ersten Anschluss anklicken.");
 }
 
 function renderConnections() {
@@ -511,8 +637,8 @@ function renderConnections() {
     const toEl = config.elements.find((x) => x.id === conn.to);
     if (!fromEl || !toEl) continue;
 
-    const p1 = elementCenter(fromEl);
-    const p2 = elementCenter(toEl);
+    const p1 = connectionEndpoint(fromEl, conn.from_port);
+    const p2 = connectionEndpoint(toEl, conn.to_port);
     const path = buildBezierPath(p1, p2);
 
     const hitbox = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -555,6 +681,16 @@ function renderConnections() {
 
 function elementCenter(el) {
   return { x: el.x + DEFAULT_ELEMENT_W / 2, y: el.y + DEFAULT_ELEMENT_H / 2 };
+}
+
+/* Liefert den Andockpunkt einer Verbindung: bei Switch/Router/Patchfeld den
+   konkreten Port (falls vorhanden), sonst den Element-Mittelpunkt. */
+function connectionEndpoint(el, portIndex) {
+  const rel = portRelOffsets[el.id];
+  if (portIndex !== null && portIndex !== undefined && rel && rel[portIndex]) {
+    return { x: el.x + rel[portIndex].x, y: el.y + rel[portIndex].y };
+  }
+  return elementCenter(el);
 }
 
 /* Geschwungene, dicke Verbindungslinien im Stil von harness.design */
@@ -670,7 +806,7 @@ function bindGlobalEvents() {
         connectFrom = null;
         viewport.classList.remove("connect-mode");
         $("#btnConnectMode").classList.remove("btn-primary");
-        $$(".net-element").forEach((n) => n.classList.remove("connect-pick"));
+        clearConnectPickHighlight();
       }
     }
   });

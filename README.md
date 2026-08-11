@@ -1,5 +1,8 @@
 # Netzwerkplan
 
+**Aktuelle Version: 1.1.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+Änderungen.
+
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
 (frei platzierbare Elemente wie Switches, Router, Server, PCs, Raspberry Pis,
 Kameras, Patchfelder usw., verbunden durch farbige Linien). Erreichbar unter
