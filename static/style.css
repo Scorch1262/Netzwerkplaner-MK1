@@ -213,6 +213,12 @@ body.use-mode .divider.edit-divider {
   top: 0; left: 0;
   width: 100%;
   height: 100%;
+  /* WICHTIG: elementLayer liegt vollflaechig ueber connectionLayer (SVG).
+     Ohne pointer-events:none wuerde diese Ebene JEDEN Klick abfangen –
+     auch auf leeren Stellen ohne Element – und Klicks auf Leitungen,
+     Verbindungs-Buttons oder Wegpunkte darunter kaemen nie an. Einzelne
+     Elemente aktivieren ihre Klickbarkeit unten selbst wieder. */
+  pointer-events: none;
 }
 
 /* ---------------- Elements ---------------- */
@@ -220,6 +226,7 @@ body.use-mode .divider.edit-divider {
 .net-element {
   position: absolute;
   display: flex;
+  pointer-events: auto;
   background: linear-gradient(160deg, var(--bg-3), var(--bg-2));
   border: 1px solid var(--border);
   border-radius: 5px;

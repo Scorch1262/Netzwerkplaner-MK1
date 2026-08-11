@@ -2,6 +2,26 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.6.1] – Grundlegender Bugfix: Leitungen/Buttons waren gar nicht klickbar
+
+- **Ursache gefunden und behoben:** Die Element-Ebene (`#elementLayer`)
+  lag als vollflächiger, transparenter Layer *über* der gesamten
+  Verbindungs-Ebene (SVG) im Canvas. Da diese Ebene keine
+  `pointer-events: none` besaß, fing sie **jeden** Mausklick im Canvas ab –
+  auch an Stellen ohne sichtbares Element. Dadurch kamen Klicks auf
+  Leitungen, den „✎"-Bearbeiten-Button an Verbindungen, Wegpunkte und die
+  Bezeichnung nie bei der darunterliegenden SVG-Ebene an. Das erklärt auch
+  frühere Probleme mit dem Ändern von Namen und dem (inzwischen entfernten)
+  Doppelklick-Verhalten.
+- `#elementLayer` hat jetzt `pointer-events: none`, `.net-element`
+  (und damit alle Kind-Elemente wie Buttons, Ports, Link-Button) setzt
+  `pointer-events: auto` gezielt wieder zurück. Klicks auf leere Stellen
+  fallen dadurch korrekt durch zur Verbindungs-Ebene.
+- Betrifft alle Interaktionen mit Verbindungen: Leitung anklicken (Dialog),
+  „✎"-Button (Kontextmenü), Wegpunkte ziehen/entfernen, Bezeichnung ziehen.
+  Auch das Verschieben der Ansicht (Pan) durch Ziehen auf leerer Fläche ist
+  davon betroffen und jetzt zuverlässiger.
+
 ## [1.6.0] – Zuverlässiger Bearbeiten-Button an Leitungen, IP-Anzeige an Elementen
 
 - **Behoben:** Das Doppelklick-Kontextmenü aus v1.5.0 hat nicht zuverlässig
