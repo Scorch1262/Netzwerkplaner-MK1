@@ -1,3 +1,6 @@
+
+![Bild](Unbenannt.PNG)
+
 # Netzwerkplan
 
 **Aktuelle Version: 1.6.1** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
