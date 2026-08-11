@@ -1,6 +1,6 @@
 # Netzwerkplan
 
-**Aktuelle Version: 1.2.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.3.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -149,8 +149,16 @@ solange gültiges JSON erhalten bleibt.
 - **Bearbeitungsmodus** (oben links umschaltbar): Elemente aus der Palette
   hinzufügen, per Drag & Drop verschieben (mit Raster/Einrasten), über den
   Stift-Button (✎) Name/Ort/Typ/Webseiten bearbeiten, über „Verbindung"
-  zwei Elemente nacheinander anklicken, um eine farbige Linie zu ziehen
+  zwei Elemente bzw. bei Switch/Router/Patchfeld zwei konkrete Ports
+  nacheinander anklicken, um eine farbige Linie zu ziehen
   (Farbe/Stärke/Bezeichnung im Klick auf die Linie einstellbar).
+  Bei Switch/Router/Patchfeld lassen sich die Ports über die Buttons „⟳"
+  (Seite drehen) und „⇋" (Reihenfolge spiegeln) am Element ausrichten.
+- **Leitungen umlegen:** Ein Doppelklick auf eine Leitung setzt dort einen
+  verschiebbaren Wegpunkt; beliebig viele Wegpunkte lassen sich ziehen, um
+  die Leitung gezielt um andere Elemente herumzuführen. Doppelklick auf
+  einen Wegpunkt entfernt ihn, „Linie zurücksetzen" im Leitungs-Dialog
+  entfernt alle Wegpunkte auf einmal.
 - **Nutzungsmodus**: Keine Änderungen möglich, es kann ausschließlich über
   den Button „↗ Webseite öffnen" auf jedem Element die hinterlegte(n)
   Webseite(n) in neuen Tabs geöffnet werden.

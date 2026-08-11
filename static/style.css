@@ -397,6 +397,7 @@ body.use-mode .divider.edit-divider {
 .conn-path {
   fill: none;
   stroke-linecap: round;
+  stroke-linejoin: round;
   cursor: pointer;
   pointer-events: stroke;
   filter: drop-shadow(0 0 3px rgba(0,0,0,0.6));
@@ -411,6 +412,14 @@ body.use-mode .divider.edit-divider {
   stroke: var(--bg-0);
   stroke-width: 3px;
 }
+.waypoint-handle {
+  stroke: #ffffff;
+  stroke-width: 1.5px;
+  cursor: grab;
+  filter: drop-shadow(0 0 3px rgba(0,0,0,0.7));
+}
+.waypoint-handle:hover { stroke-width: 2.5px; }
+.waypoint-handle:active { cursor: grabbing; }
 
 /* ---------------- Statusbar ---------------- */
 
@@ -484,6 +493,17 @@ body.use-mode .divider.edit-divider {
 .modal select:focus,
 .modal textarea:focus { outline: none; border-color: var(--accent); }
 .modal input[type="range"] { width: 100%; margin-top: 8px; }
+
+.modal-hint {
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin: -4px 0 14px 0;
+  padding: 8px 10px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+}
 
 .modal-actions {
   display: flex;

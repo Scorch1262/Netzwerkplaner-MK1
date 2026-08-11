@@ -60,6 +60,7 @@ const ZOOM_MIN = 0.25, ZOOM_MAX = 2.5;
 
 let isPanning = false, panStart = { x: 0, y: 0 }, panOrigin = { x: 0, y: 0 };
 let draggingEl = null, dragOffset = { x: 0, y: 0 };
+let draggingWaypoint = null; // { connId, index } | null
 let connectMode = false, connectFrom = null; // connectFrom = { id, port } | { id, port: null }
 let editingElementId = null;
 let editingConnId = null;
@@ -257,6 +258,9 @@ window.addEventListener("mousemove", (e) => {
   if (draggingEl) {
     moveDraggingElement(e);
   }
+  if (draggingWaypoint) {
+    moveDraggingWaypoint(e);
+  }
 });
 
 window.addEventListener("mouseup", () => {
@@ -268,7 +272,21 @@ window.addEventListener("mouseup", () => {
   if (draggingEl) {
     finishDraggingElement();
   }
+  if (draggingWaypoint) {
+    draggingWaypoint = null;
+    persistConfig();
+  }
 });
+
+function moveDraggingWaypoint(e) {
+  const conn = config.connections.find((c) => c.id === draggingWaypoint.connId);
+  if (!conn || !Array.isArray(conn.waypoints)) return;
+  const rect = viewport.getBoundingClientRect();
+  const x = (e.clientX - rect.left - panX) / scale;
+  const y = (e.clientY - rect.top - panY) / scale;
+  conn.waypoints[draggingWaypoint.index] = { x, y };
+  renderConnections();
+}
 
 /* ------------------------------------------------------------------ */
 /* Elemente: Rendern                                                   */
@@ -695,6 +713,7 @@ function handleConnectPick(id, port) {
     color: selectedColor,
     thickness: 4,
     label: "",
+    waypoints: [],
   };
   config.connections.push(conn);
   clearConnectPickHighlight();
@@ -710,10 +729,19 @@ function renderConnections() {
     const fromEl = config.elements.find((x) => x.id === conn.from);
     const toEl = config.elements.find((x) => x.id === conn.to);
     if (!fromEl || !toEl) continue;
+    if (!Array.isArray(conn.waypoints)) conn.waypoints = [];
 
     const p1 = connectionEndpoint(fromEl, conn.from_port);
     const p2 = connectionEndpoint(toEl, conn.to_port);
-    const path = buildBezierPath(p1, p2);
+    const dir1 = connectionDirection(fromEl, conn.from_port);
+    const dir2 = connectionDirection(toEl, conn.to_port);
+
+    const path = conn.waypoints.length > 0
+      ? roundedPath([p1, ...conn.waypoints, p2], 20)
+      : buildAutoPath(p1, p2, dir1, dir2);
+
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.style.pointerEvents = mode === "edit" ? "auto" : "none";
 
     const hitbox = document.createElementNS("http://www.w3.org/2000/svg", "path");
     hitbox.setAttribute("d", path);
@@ -727,31 +755,159 @@ function renderConnections() {
     visible.style.color = conn.color || "#3ad6ff";
     visible.style.pointerEvents = "none";
 
-    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    group.style.pointerEvents = mode === "edit" ? "auto" : "none";
     if (mode === "edit") {
-      hitbox.addEventListener("click", () => openConnModal(conn.id));
+      const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+      title.textContent = "Klick: bearbeiten – Doppelklick: Wegpunkt hinzufuegen (fuer eigene Linienfuehrung)";
+      hitbox.appendChild(title);
+
+      let clickTimer = null;
+      hitbox.addEventListener("click", () => {
+        if (connectMode) return;
+        clearTimeout(clickTimer);
+        clickTimer = setTimeout(() => openConnModal(conn.id), 220);
+      });
+      hitbox.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        clearTimeout(clickTimer);
+        if (connectMode) return;
+        addWaypointAtEvent(conn, p1, p2, e);
+      });
     }
+
     group.appendChild(hitbox);
     group.appendChild(visible);
 
     if (conn.label) {
-      const mid = {
-        x: (p1.x + p2.x) / 2,
-        y: (p1.y + p2.y) / 2 - 6,
-      };
+      const mid = pathMidpoint([p1, ...conn.waypoints, p2]);
       const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
       text.setAttribute("x", mid.x);
-      text.setAttribute("y", mid.y);
+      text.setAttribute("y", mid.y - 8);
       text.setAttribute("class", "conn-label");
       text.setAttribute("text-anchor", "middle");
       text.textContent = conn.label;
       group.appendChild(text);
     }
 
+    if (mode === "edit") {
+      conn.waypoints.forEach((wp, idx) => {
+        const handle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        handle.setAttribute("cx", wp.x);
+        handle.setAttribute("cy", wp.y);
+        handle.setAttribute("r", 6);
+        handle.setAttribute("class", "waypoint-handle");
+        handle.style.fill = conn.color || "#3ad6ff";
+        const wpTitle = document.createElementNS("http://www.w3.org/2000/svg", "title");
+        wpTitle.textContent = "Ziehen: Leitung umlegen – Doppelklick: Wegpunkt entfernen";
+        handle.appendChild(wpTitle);
+        handle.addEventListener("mousedown", (e) => {
+          e.stopPropagation();
+          draggingWaypoint = { connId: conn.id, index: idx };
+        });
+        handle.addEventListener("dblclick", (e) => {
+          e.stopPropagation();
+          conn.waypoints.splice(idx, 1);
+          renderConnections();
+          persistConfig();
+        });
+        group.appendChild(handle);
+      });
+    }
+
     connectionLayer.appendChild(group);
   }
   markPortColors();
+}
+
+/* Ermittelt die Austrittsrichtung eines Verbindungsendes: bei einem
+   konkreten Port zeigt die Leitung senkrecht von der Portseite weg, damit
+   Leitungen nicht quer durch das Element oder andere Elemente laufen und
+   sich weniger leicht "verknoten". Ohne konkreten Port: keine feste
+   Richtung (automatische Heuristik in buildAutoPath). */
+function connectionDirection(el, portIndex) {
+  if (portIndex === null || portIndex === undefined) return null;
+  if (!hasPorts(el.type)) return null;
+  const side = getPortSide(el);
+  return { bottom: { x: 0, y: 1 }, top: { x: 0, y: -1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } }[side];
+}
+
+/* Automatisches Routing ohne manuelle Wegpunkte: weiche Bezierkurve, die an
+   Ports senkrecht zur Portseite abgeht (verhindert Kreuzungen durch das
+   Element selbst) und sich sonst am Verlauf zwischen den Punkten orientiert. */
+function buildAutoPath(p1, p2, dir1, dir2) {
+  const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+  const curveLen = Math.max(50, Math.min(160, dist * 0.5));
+  const d1 = dir1 || autoDirection(p1, p2);
+  const d2 = dir2 || autoDirection(p2, p1);
+  const c1 = { x: p1.x + d1.x * curveLen, y: p1.y + d1.y * curveLen };
+  const c2 = { x: p2.x + d2.x * curveLen, y: p2.y + d2.y * curveLen };
+  return `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
+}
+function autoDirection(from, to) {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  if (Math.abs(dx) >= Math.abs(dy)) return { x: Math.sign(dx) || 1, y: 0 };
+  return { x: 0, y: Math.sign(dy) || 1 };
+}
+
+/* Manuelles Routing durch die vom Nutzer gesetzten Wegpunkte: gerade
+   Teilstrecken mit sanft abgerundeten Ecken (wie bei physischen
+   Kabelverlegungen), damit man die Leitung gezielt anders herum verlegen
+   kann, um Ueberschneidungen zu vermeiden. */
+function roundedPath(points, radius) {
+  if (points.length < 2) return "";
+  if (points.length === 2) {
+    return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+  }
+  let d = `M ${points[0].x} ${points[0].y} `;
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points[i - 1], curr = points[i], next = points[i + 1];
+    const segLen1 = Math.hypot(curr.x - prev.x, curr.y - prev.y) || 1;
+    const segLen2 = Math.hypot(next.x - curr.x, next.y - curr.y) || 1;
+    const v1 = { x: (curr.x - prev.x) / segLen1, y: (curr.y - prev.y) / segLen1 };
+    const v2 = { x: (next.x - curr.x) / segLen2, y: (next.y - curr.y) / segLen2 };
+    const cut1 = Math.min(radius, segLen1 / 2);
+    const cut2 = Math.min(radius, segLen2 / 2);
+    const before = { x: curr.x - v1.x * cut1, y: curr.y - v1.y * cut1 };
+    const after = { x: curr.x + v2.x * cut2, y: curr.y + v2.y * cut2 };
+    d += `L ${before.x} ${before.y} Q ${curr.x} ${curr.y}, ${after.x} ${after.y} `;
+  }
+  const last = points[points.length - 1];
+  d += `L ${last.x} ${last.y}`;
+  return d;
+}
+
+function pathMidpoint(points) {
+  const mid = Math.floor((points.length - 1) / 2);
+  const a = points[mid], b = points[Math.min(mid + 1, points.length - 1)];
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+/* Fuegt beim Doppelklick auf eine Leitung an der geklickten Stelle einen
+   neuen, frei verschiebbaren Wegpunkt ein (an der naechstgelegenen
+   Teilstrecke), damit die Leitung gezielt umgeleitet werden kann. */
+function addWaypointAtEvent(conn, p1, p2, e) {
+  const rect = viewport.getBoundingClientRect();
+  const click = {
+    x: (e.clientX - rect.left - panX) / scale,
+    y: (e.clientY - rect.top - panY) / scale,
+  };
+  const pts = [p1, ...conn.waypoints, p2];
+  let bestIdx = 0, bestDist = Infinity;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const d = distToSegment(click, pts[i], pts[i + 1]);
+    if (d < bestDist) { bestDist = d; bestIdx = i; }
+  }
+  conn.waypoints.splice(bestIdx, 0, click);
+  renderConnections();
+  persistConfig();
+}
+
+function distToSegment(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  let t = lenSq === 0 ? 0 : ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  const projX = a.x + t * dx, projY = a.y + t * dy;
+  return Math.hypot(p.x - projX, p.y - projY);
 }
 
 /* Faerbt jeden belegten Port-Andockpunkt in der Farbe seiner Verbindung ein,
@@ -801,16 +957,8 @@ function connectionEndpoint(el, portIndex) {
   return elementCenter(el);
 }
 
-/* Geschwungene, dicke Verbindungslinien im Stil von harness.design */
-function buildBezierPath(p1, p2) {
-  const dx = Math.abs(p2.x - p1.x);
-  const curve = Math.max(60, dx * 0.4);
-  const c1x = p1.x + curve;
-  const c1y = p1.y;
-  const c2x = p2.x - curve;
-  const c2y = p2.y;
-  return `M ${p1.x} ${p1.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
-}
+/* Geschwungene, dicke Verbindungslinien im Stil von harness.design –
+   siehe buildAutoPath() weiter oben fuer das eigentliche Routing. */
 
 function openConnModal(id) {
   editingConnId = id;
@@ -832,6 +980,15 @@ $("#cThickness").addEventListener("input", (e) => {
 });
 
 $("#cCancel").addEventListener("click", () => $("#connModal").classList.add("hidden"));
+
+$("#cResetRoute").addEventListener("click", () => {
+  const conn = config.connections.find((c) => c.id === editingConnId);
+  if (!conn) return;
+  conn.waypoints = [];
+  $("#connModal").classList.add("hidden");
+  renderConnections();
+  persistConfig();
+});
 
 $("#cSave").addEventListener("click", () => {
   const conn = config.connections.find((c) => c.id === editingConnId);

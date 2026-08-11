@@ -2,6 +2,29 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.3.0] – Leitungsführung: weniger Verknoten, manuell anpassbar
+
+- **Richtungsbasiertes Auto-Routing:** Leitungen, die an einem konkreten
+  Port (Switch/Router/Patchfeld) beginnen oder enden, verlassen das
+  Element jetzt senkrecht zur Portseite (z. B. nach unten, wenn die Ports
+  unten liegen), statt immer in eine feste Richtung zu kurven. Dadurch
+  laufen deutlich weniger Leitungen quer durchs Element oder durch andere
+  Elemente hindurch.
+- **Leitungen manuell verlegen:** Ein Doppelklick auf eine Leitung fügt an
+  der geklickten Stelle einen frei verschiebbaren Wegpunkt hinzu. Beliebig
+  viele Wegpunkte können gesetzt und per Ziehen verschoben werden, um die
+  Leitung gezielt um andere Elemente oder Leitungen herumzuführen. Ein
+  Doppelklick auf einen Wegpunkt entfernt ihn wieder.
+- Die Linienführung wird als sanft abgerundete Kabelverlegung durch die
+  Wegpunkte dargestellt (statt einer einzigen Kurve).
+- Im Verbindungs-Dialog gibt es jetzt den Button „Linie zurücksetzen“, der
+  alle manuell gesetzten Wegpunkte entfernt und zur automatischen
+  Linienführung zurückkehrt.
+- `config.json`: Jede Verbindung hat jetzt zusätzlich das Feld `waypoints`
+  (Liste von `{x, y}`-Punkten in Canvas-Koordinaten, standardmäßig leer =
+  automatische Linienführung). Bestehende Konfigurationen ohne dieses Feld
+  funktionieren unverändert weiter (automatische Ergänzung beim Laden).
+
 ## [1.2.0] – Ports in einer Reihe, dreh-/spiegelbar, freie Leitungsfarben, aufgeräumter Nutzungsmodus
 
 - **Ports in einer Reihe:** Alle Ports eines Switch/Router/Patchfelds liegen

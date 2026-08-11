@@ -1,76 +1,78 @@
 {
   "_kommentar": "Diese Datei wird vom Netzwerkplan-Programm gelesen und geschrieben. Manuelle Aenderungen sind moeglich, aber bitte gueltiges JSON beibehalten.",
+  "connections": [
+    {
+      "color": "#3ad6ff",
+      "from": "el-gateway-1",
+      "from_port": null,
+      "id": "conn-1",
+      "label": "Uplink",
+      "thickness": 5,
+      "to": "el-switch-1",
+      "to_port": 0,
+      "waypoints": []
+    },
+    {
+      "color": "#ff8a3d",
+      "from": "el-switch-1",
+      "from_port": 1,
+      "id": "conn-2",
+      "label": "1 GbE",
+      "thickness": 4,
+      "to": "el-server-1",
+      "to_port": null,
+      "waypoints": []
+    }
+  ],
+  "elements": [
+    {
+      "id": "el-gateway-1",
+      "links": [
+        "https://192.168.1.1"
+      ],
+      "location": "Serverraum EG, Rack 1",
+      "name": "Internet-Gateway",
+      "type": "gateway",
+      "x": 400,
+      "y": 120
+    },
+    {
+      "id": "el-switch-1",
+      "links": [
+        "https://192.168.1.2"
+      ],
+      "location": "Serverraum EG, Rack 1",
+      "name": "Core-Switch",
+      "port_mirror": false,
+      "port_side": "bottom",
+      "ports": 8,
+      "type": "switch",
+      "x": 400,
+      "y": 320
+    },
+    {
+      "id": "el-server-1",
+      "links": [
+        "https://192.168.1.10"
+      ],
+      "location": "Serverraum EG, Rack 2",
+      "name": "Fileserver",
+      "type": "server",
+      "x": 700,
+      "y": 320
+    }
+  ],
+  "mode": "edit",
   "server": {
     "host": "0.0.0.0",
     "port": 8080
   },
   "view": {
-    "zoom": 1.0,
+    "grid_size": 40,
     "pan_x": 0,
     "pan_y": 0,
     "show_grid": true,
     "snap_to_grid": true,
-    "grid_size": 40
-  },
-  "mode": "edit",
-  "elements": [
-    {
-      "id": "el-gateway-1",
-      "type": "gateway",
-      "name": "Internet-Gateway",
-      "location": "Serverraum EG, Rack 1",
-      "x": 400,
-      "y": 120,
-      "links": [
-        "https://192.168.1.1"
-      ]
-    },
-    {
-      "id": "el-switch-1",
-      "type": "switch",
-      "name": "Core-Switch",
-      "location": "Serverraum EG, Rack 1",
-      "x": 400,
-      "y": 320,
-      "ports": 8,
-      "port_side": "bottom",
-      "port_mirror": false,
-      "links": [
-        "https://192.168.1.2"
-      ]
-    },
-    {
-      "id": "el-server-1",
-      "type": "server",
-      "name": "Fileserver",
-      "location": "Serverraum EG, Rack 2",
-      "x": 700,
-      "y": 320,
-      "links": [
-        "https://192.168.1.10"
-      ]
-    }
-  ],
-  "connections": [
-    {
-      "id": "conn-1",
-      "from": "el-gateway-1",
-      "to": "el-switch-1",
-      "from_port": null,
-      "to_port": 0,
-      "color": "#3ad6ff",
-      "thickness": 5,
-      "label": "Uplink"
-    },
-    {
-      "id": "conn-2",
-      "from": "el-switch-1",
-      "to": "el-server-1",
-      "from_port": 1,
-      "to_port": null,
-      "color": "#ff8a3d",
-      "thickness": 4,
-      "label": "1 GbE"
-    }
-  ]
+    "zoom": 1.0
+  }
 }
