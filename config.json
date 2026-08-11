@@ -1,0 +1,69 @@
+{
+  "_kommentar": "Diese Datei wird vom Netzwerkplan-Programm gelesen und geschrieben. Manuelle Aenderungen sind moeglich, aber bitte gueltiges JSON beibehalten.",
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080
+  },
+  "view": {
+    "zoom": 1.0,
+    "pan_x": 0,
+    "pan_y": 0,
+    "show_grid": true,
+    "snap_to_grid": true,
+    "grid_size": 40
+  },
+  "mode": "edit",
+  "elements": [
+    {
+      "id": "el-gateway-1",
+      "type": "gateway",
+      "name": "Internet-Gateway",
+      "location": "Serverraum EG, Rack 1",
+      "x": 400,
+      "y": 120,
+      "links": [
+        "https://192.168.1.1"
+      ]
+    },
+    {
+      "id": "el-switch-1",
+      "type": "switch",
+      "name": "Core-Switch",
+      "location": "Serverraum EG, Rack 1",
+      "x": 400,
+      "y": 320,
+      "links": [
+        "https://192.168.1.2"
+      ]
+    },
+    {
+      "id": "el-server-1",
+      "type": "server",
+      "name": "Fileserver",
+      "location": "Serverraum EG, Rack 2",
+      "x": 700,
+      "y": 320,
+      "links": [
+        "https://192.168.1.10"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "conn-1",
+      "from": "el-gateway-1",
+      "to": "el-switch-1",
+      "color": "#3ad6ff",
+      "thickness": 5,
+      "label": "Uplink"
+    },
+    {
+      "id": "conn-2",
+      "from": "el-switch-1",
+      "to": "el-server-1",
+      "color": "#ff8a3d",
+      "thickness": 4,
+      "label": "1 GbE"
+    }
+  ]
+}
