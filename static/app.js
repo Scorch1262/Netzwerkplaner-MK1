@@ -443,7 +443,7 @@ function buildElementNode(el) {
     </div>
     <div class="el-location">${escapeHtml(el.location || "")}</div>
     ${hostDisplay ? `<div class="el-ip" title="Eingestellte IP / Adresse">IP: ${escapeHtml(hostDisplay)}</div>` : ""}
-    <button class="el-link-btn" ${hasLinks ? "" : "disabled"}>↗ Webseite oeffnen</button>
+    <button class="el-link-btn" ${hasLinks ? "" : "disabled"}>↗ Webseite</button>
   `;
   node.appendChild(body);
 
@@ -512,7 +512,7 @@ function buildElementNode(el) {
       dot.dataset.port = String(i);
       const customName = getPortName(el, i);
       dot.title = customName ? `${customName} (Port ${i + 1})` : "Port " + (i + 1) + " – Doppelklick: Namen vergeben";
-      dot.textContent = String(i + 1);
+      dot.textContent = customName ? (i + 1) + " " + customName : String(i + 1);
       if (customName) dot.classList.add("port-named");
       dot.addEventListener("mousedown", (e) => e.stopPropagation());
       dot.addEventListener("click", (e) => {

@@ -1,9 +1,9 @@
 
-![Bild](Unbenannt.PNG)
+![Bild](Unbenannt.PNG)!
 
 # Netzwerkplan
 
-**Aktuelle Version: 1.7.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.7.1** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -181,7 +181,7 @@ solange gültiges JSON erhalten bleibt.
   Ziehen frei verschieben (mit gestrichelter Führungslinie zur Leitung,
   wenn sie weiter weg gesetzt wird).
 - **Nutzungsmodus**: Keine Änderungen möglich, es kann ausschließlich über
-  den Button „↗ Webseite öffnen" auf jedem Element die hinterlegte(n)
+  den Button „↗ Webseite" auf jedem Element die hinterlegte(n)
   Webseite(n) in neuen Tabs geöffnet werden.
 - **Zoom/Pan**: Mausrad zum Zoomen, Ziehen auf leerer Fläche zum Verschieben
   der Ansicht, +/−/⤢ oben rechts als Alternative.

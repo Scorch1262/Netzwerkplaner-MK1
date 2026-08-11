@@ -395,8 +395,10 @@ body.use-mode .divider.edit-divider {
 }
 
 .port-dot {
-  width: 14px;
+  min-width: 14px;
+  width: auto;
   height: 14px;
+  padding: 0 3px;
   border-radius: 3px;
   background: var(--bg-1);
   border: 1px solid var(--border);
@@ -404,9 +406,11 @@ body.use-mode .divider.edit-divider {
   font-family: var(--font-mono);
   font-size: 7px;
   line-height: 1;
+  white-space: nowrap;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 3px;
   cursor: default;
   user-select: none;
   flex-shrink: 0;
@@ -420,7 +424,12 @@ body.use-mode .divider.edit-divider {
   box-shadow: 0 0 8px rgba(255,138,61,0.8) !important;
 }
 .port-dot.port-connected { font-weight: 700; }
-.port-dot.port-named { border-bottom: 2px solid var(--accent-2); }
+.port-dot.port-named {
+  border-bottom: 2px solid var(--accent-2);
+  font-size: 8px;
+  color: var(--text-1);
+  padding: 0 5px;
+}
 
 /* Schwebendes Eingabefeld zum schnellen Umbenennen eines Ports (Doppelklick) */
 .port-name-input {

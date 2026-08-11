@@ -2,6 +2,15 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.7.1] – Kürzerer Button-Text, Portnamen immer sichtbar
+
+- Der Button „↗ Webseite öffnen" an jedem Element heißt jetzt kürzer
+  „↗ Webseite".
+- Portnamen werden jetzt **immer direkt hinter der Portnummer angezeigt**
+  (z. B. „1 Uplink WAN"), statt nur beim Draufzeigen als Tooltip sichtbar
+  zu sein. Der Port-Andockpunkt verbreitert sich dafür automatisch; der
+  volle Name bleibt zusätzlich als Tooltip verfügbar.
+
 ## [1.7.0] – Portnamen, Rahmen-Mehrfachauswahl mit Gruppen-Verschieben
 
 - **Neu – Portnamen:** Einzelne Ports von Switch/Router/Patchfeld können
