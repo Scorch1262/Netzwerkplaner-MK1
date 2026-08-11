@@ -20,7 +20,7 @@
         <span id="modeToggleLabel">BEARBEITUNGSMODUS</span>
       </button>
 
-      <div class="divider"></div>
+      <div class="divider edit-divider"></div>
 
       <div id="editTools" class="edit-tools">
         <div class="palette" id="palette"></div>
@@ -28,6 +28,9 @@
         <button id="btnConnectMode" class="btn" title="Verbindung zwischen zwei Elementen ziehen">
           ⤳ Verbindung
         </button>
+        <label class="chk" title="Farbe fuer neue Verbindungen">
+          Farbe <input type="color" id="newConnColor" value="#3ad6ff">
+        </label>
 
         <label class="chk"><input type="checkbox" id="chkGrid" checked> Raster</label>
         <label class="chk"><input type="checkbox" id="chkSnap" checked> Einrasten</label>
@@ -37,7 +40,7 @@
         </button>
       </div>
 
-      <div class="divider"></div>
+      <div class="divider edit-divider"></div>
 
       <div class="zoom-controls">
         <button id="btnZoomOut" class="btn btn-icon">−</button>
@@ -108,6 +111,10 @@
 
     <label>Farbe
       <div class="color-row" id="colorRow"></div>
+      <div class="color-free-row">
+        <input type="color" id="cColorPicker" value="#3ad6ff">
+        <span class="color-free-label">Freie Farbwahl</span>
+      </div>
     </label>
 
     <label>Staerke: <span id="cThicknessVal">4</span> px

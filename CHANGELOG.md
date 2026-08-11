@@ -2,6 +2,35 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.2.0] – Ports in einer Reihe, dreh-/spiegelbar, freie Leitungsfarben, aufgeräumter Nutzungsmodus
+
+- **Ports in einer Reihe:** Alle Ports eines Switch/Router/Patchfelds liegen
+  jetzt gemeinsam auf einer Seite des Elements in einer einzigen Reihe
+  (nicht mehr umbrechend), statt in einem Raster verteilt zu sein.
+- **Rotierbar:** Über den Button „⟳“ am Element lässt sich die Seite, auf
+  der die Ports liegen, im Uhrzeigersinn durch unten → links → oben →
+  rechts drehen.
+- **Spiegelbar:** Über den Button „⇋“ lässt sich die Reihenfolge der Ports
+  innerhalb der Reihe umkehren – beides zusammen erlaubt es, das Element so
+  auszurichten, dass Leitungen möglichst kreuzungsfrei und gut lesbar
+  verlaufen.
+- **Klare Zuordnung Leitung↔Port:** Ein belegter Port färbt sich automatisch
+  in der Farbe seiner Verbindung ein, sodass auf einen Blick erkennbar ist,
+  welche Leitung an welchem Port hängt.
+- **Freie Farbwahl für Leitungen:** Zusätzlich zu den Farb-Presets gibt es
+  jetzt einen echten Farbwähler (Color-Picker) – sowohl beim Bearbeiten
+  einer bestehenden Verbindung als auch direkt in der Werkzeugleiste beim
+  Ziehen neuer Verbindungen.
+- **Nutzungsmodus aufgeräumt:** Die Bedienelemente des Bearbeitungsmodus
+  (Element-Palette, „Verbindung“-Button, Raster-/Einrasten-Kontrollkästchen,
+  „Speichern“-Button, Farbwähler) werden im Nutzungsmodus jetzt vollständig
+  ausgeblendet statt nur ausgegraut. Sichtbar bleiben nur der Moduswechsel
+  und die Zoom-Steuerung.
+- `config.json`: Elemente mit Ports erhalten zusätzlich die Felder
+  `port_side` (`"bottom"`/`"top"`/`"left"`/`"right"`, Standard `"bottom"`)
+  und `port_mirror` (`true`/`false`, Standard `false`). Bestehende
+  Konfigurationen ohne diese Felder funktionieren unverändert weiter.
+
 ## [1.1.0] – Port-Andockpunkte für Switch, Patchfeld und Router
 
 - Switches, Patchfelder und Router haben jetzt eine konfigurierbare Anzahl

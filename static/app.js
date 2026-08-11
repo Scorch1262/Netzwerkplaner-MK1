@@ -34,6 +34,9 @@ const DEFAULT_PORTS = {
 const PORT_MIN = 1, PORT_MAX = 48;
 const PORT_DOT = 14, PORT_GAP = 5;
 
+/* Reihenfolge beim Rotieren (Uhrzeigersinn): unten -> links -> oben -> rechts */
+const PORT_SIDES = ["bottom", "left", "top", "right"];
+
 function hasPorts(type) {
   return Object.prototype.hasOwnProperty.call(DEFAULT_PORTS, type);
 }
@@ -41,6 +44,12 @@ function getPortCount(el) {
   if (!hasPorts(el.type)) return 0;
   const n = parseInt(el.ports, 10);
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_PORTS[el.type];
+}
+function getPortSide(el) {
+  return PORT_SIDES.includes(el.port_side) ? el.port_side : "bottom";
+}
+function getPortMirror(el) {
+  return !!el.port_mirror;
 }
 
 let config = null;
@@ -137,10 +146,16 @@ function buildColorRow() {
       selectedColor = color;
       $$(".color-swatch").forEach((s) => s.classList.remove("selected"));
       sw.classList.add("selected");
+      $("#cColorPicker").value = color;
     });
     row.appendChild(sw);
   }
 }
+
+$("#cColorPicker").addEventListener("input", (e) => {
+  selectedColor = e.target.value;
+  $$(".color-swatch").forEach((s) => s.classList.remove("selected"));
+});
 
 /* ------------------------------------------------------------------ */
 /* Modus: Bearbeitung <-> Nutzung                                      */
@@ -149,18 +164,15 @@ function buildColorRow() {
 function applyMode() {
   const btn = $("#modeToggle");
   const label = $("#modeToggleLabel");
-  const editTools = $("#editTools");
   document.body.classList.toggle("edit-mode", mode === "edit");
   document.body.classList.toggle("use-mode", mode === "use");
 
   if (mode === "edit") {
     label.textContent = "BEARBEITUNGSMODUS";
     btn.classList.remove("use-mode");
-    editTools.classList.remove("disabled");
   } else {
     label.textContent = "NUTZUNGSMODUS";
     btn.classList.add("use-mode");
-    editTools.classList.add("disabled");
     connectMode = false;
     viewport.classList.remove("connect-mode");
     connectFrom = null;
@@ -285,8 +297,17 @@ function buildElementNode(el) {
 
   const hasLinks = Array.isArray(el.links) && el.links.filter(Boolean).length > 0;
   const portCount = getPortCount(el);
+  const side = getPortSide(el);
+  const mirrored = getPortMirror(el);
 
-  node.innerHTML = `
+  if (portCount > 0) {
+    node.classList.add("has-ports", "side-" + side);
+    if (mirrored) node.classList.add("mirrored");
+  }
+
+  const body = document.createElement("div");
+  body.className = "el-body";
+  body.innerHTML = `
     <div class="el-head">
       <div class="el-icon" style="color:${def.color}">${def.icon}</div>
       <div>
@@ -297,24 +318,14 @@ function buildElementNode(el) {
     <div class="el-location">${escapeHtml(el.location || "")}</div>
     <button class="el-link-btn" ${hasLinks ? "" : "disabled"}>↗ Webseite oeffnen</button>
   `;
-
-  if (portCount > 0) {
-    const portsWrap = document.createElement("div");
-    portsWrap.className = "ports-container";
-    for (let i = 0; i < portCount; i++) {
-      const dot = document.createElement("div");
-      dot.className = "port-dot";
-      dot.dataset.port = String(i);
-      dot.title = "Port " + (i + 1);
-      dot.textContent = String(i + 1);
-      portsWrap.appendChild(dot);
-    }
-    node.appendChild(portsWrap);
-  }
+  node.appendChild(body);
 
   if (mode === "edit") {
+    const controls = document.createElement("div");
+    controls.className = "el-controls";
+
     const editBtn = document.createElement("div");
-    editBtn.className = "el-edit-btn";
+    editBtn.className = "el-ctrl-btn";
     editBtn.textContent = "✎";
     editBtn.title = "Bearbeiten";
     editBtn.addEventListener("mousedown", (e) => e.stopPropagation());
@@ -322,16 +333,42 @@ function buildElementNode(el) {
       e.stopPropagation();
       openElementModal(el.id);
     });
-    node.appendChild(editBtn);
+    controls.appendChild(editBtn);
+
+    if (portCount > 0) {
+      const rotateBtn = document.createElement("div");
+      rotateBtn.className = "el-ctrl-btn";
+      rotateBtn.textContent = "⟳";
+      rotateBtn.title = "Ports auf naechste Seite drehen (aktuell: " + sideLabel(side) + ")";
+      rotateBtn.addEventListener("mousedown", (e) => e.stopPropagation());
+      rotateBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        rotatePorts(el.id);
+      });
+      controls.appendChild(rotateBtn);
+
+      const mirrorBtn = document.createElement("div");
+      mirrorBtn.className = "el-ctrl-btn" + (mirrored ? " active" : "");
+      mirrorBtn.textContent = "⇋";
+      mirrorBtn.title = "Portreihenfolge spiegeln";
+      mirrorBtn.addEventListener("mousedown", (e) => e.stopPropagation());
+      mirrorBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        mirrorPorts(el.id);
+      });
+      controls.appendChild(mirrorBtn);
+    }
+
+    body.appendChild(controls);
   }
 
-  node.querySelector(".el-link-btn").addEventListener("click", (e) => {
+  body.querySelector(".el-link-btn").addEventListener("click", (e) => {
     e.stopPropagation();
     if (hasLinks) openLinks(el);
   });
 
   node.addEventListener("mousedown", (e) => {
-    if (e.target.closest(".el-link-btn") || e.target.closest(".el-edit-btn")) return;
+    if (e.target.closest(".el-link-btn") || e.target.closest(".el-ctrl-btn")) return;
     if (mode === "edit" && !connectMode) {
       startDraggingElement(el.id, node, e);
     }
@@ -340,18 +377,27 @@ function buildElementNode(el) {
   if (portCount > 0) {
     /* Elemente mit Ports: Verbindungen duerfen nur an einem konkreten
        Port-Andockpunkt gestartet/beendet werden, nicht am Element selbst. */
-    node.querySelectorAll(".port-dot").forEach((dot) => {
+    const portsBar = document.createElement("div");
+    portsBar.className = "ports-bar";
+    for (let i = 0; i < portCount; i++) {
+      const dot = document.createElement("div");
+      dot.className = "port-dot";
+      dot.dataset.port = String(i);
+      dot.title = "Port " + (i + 1);
+      dot.textContent = String(i + 1);
       dot.addEventListener("mousedown", (e) => e.stopPropagation());
       dot.addEventListener("click", (e) => {
         e.stopPropagation();
         if (mode === "edit" && connectMode) {
-          handleConnectPick(el.id, parseInt(dot.dataset.port, 10));
+          handleConnectPick(el.id, i);
         }
       });
-    });
+      portsBar.appendChild(dot);
+    }
+    node.appendChild(portsBar);
   } else {
     node.addEventListener("click", (e) => {
-      if (e.target.closest(".el-link-btn") || e.target.closest(".el-edit-btn")) return;
+      if (e.target.closest(".el-link-btn") || e.target.closest(".el-ctrl-btn")) return;
       if (mode === "edit" && connectMode) {
         handleConnectPick(el.id, null);
       }
@@ -359,6 +405,30 @@ function buildElementNode(el) {
   }
 
   return node;
+}
+
+function sideLabel(side) {
+  return { bottom: "unten", top: "oben", left: "links", right: "rechts" }[side] || side;
+}
+
+function rotatePorts(id) {
+  const el = config.elements.find((x) => x.id === id);
+  if (!el) return;
+  const current = getPortSide(el);
+  const idx = PORT_SIDES.indexOf(current);
+  el.port_side = PORT_SIDES[(idx + 1) % PORT_SIDES.length];
+  renderElements();
+  renderConnections();
+  persistConfig();
+}
+
+function mirrorPorts(id) {
+  const el = config.elements.find((x) => x.id === id);
+  if (!el) return;
+  el.port_mirror = !getPortMirror(el);
+  renderElements();
+  renderConnections();
+  persistConfig();
 }
 
 /* Berechnet fuer jedes Element mit Ports die Position jedes Port-Andockpunkts
@@ -571,6 +641,10 @@ $("#lOpenAll").addEventListener("click", () => {
 /* Verbindungen                                                        */
 /* ------------------------------------------------------------------ */
 
+$("#newConnColor").addEventListener("input", (e) => {
+  selectedColor = e.target.value;
+});
+
 $("#btnConnectMode").addEventListener("click", () => {
   connectMode = !connectMode;
   connectFrom = null;
@@ -677,6 +751,40 @@ function renderConnections() {
 
     connectionLayer.appendChild(group);
   }
+  markPortColors();
+}
+
+/* Faerbt jeden belegten Port-Andockpunkt in der Farbe seiner Verbindung ein,
+   damit auf einen Blick erkennbar ist, welche Leitung an welchem Port haengt. */
+function markPortColors() {
+  elementLayer.querySelectorAll(".port-dot").forEach((dot) => {
+    dot.style.borderColor = "";
+    dot.style.boxShadow = "";
+    dot.style.background = "";
+    dot.style.color = "";
+    dot.classList.remove("port-connected");
+  });
+  for (const conn of config.connections) {
+    const color = conn.color || "#3ad6ff";
+    if (conn.from_port !== null && conn.from_port !== undefined) {
+      applyPortColor(conn.from, conn.from_port, color);
+    }
+    if (conn.to_port !== null && conn.to_port !== undefined) {
+      applyPortColor(conn.to, conn.to_port, color);
+    }
+  }
+}
+
+function applyPortColor(elId, portIndex, color) {
+  const dot = elementLayer.querySelector(
+    `.net-element[data-id="${elId}"] .port-dot[data-port="${portIndex}"]`
+  );
+  if (!dot) return;
+  dot.classList.add("port-connected");
+  dot.style.borderColor = color;
+  dot.style.boxShadow = "0 0 5px " + color;
+  dot.style.background = color;
+  dot.style.color = "#0a0e14";
 }
 
 function elementCenter(el) {
@@ -712,6 +820,7 @@ function openConnModal(id) {
   $("#cThickness").value = conn.thickness || 4;
   $("#cThicknessVal").textContent = conn.thickness || 4;
   selectedColor = conn.color || CONNECTION_COLORS[0];
+  $("#cColorPicker").value = selectedColor;
   $$(".color-swatch").forEach((s) => {
     s.classList.toggle("selected", s.dataset.color === selectedColor);
   });

@@ -33,6 +33,8 @@
       "x": 400,
       "y": 320,
       "ports": 8,
+      "port_side": "bottom",
+      "port_mirror": false,
       "links": [
         "https://192.168.1.2"
       ]
