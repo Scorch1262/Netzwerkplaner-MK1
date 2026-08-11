@@ -1,6 +1,6 @@
 # Netzwerkplan
 
-**Aktuelle Version: 1.3.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.4.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -159,6 +159,12 @@ solange gültiges JSON erhalten bleibt.
   die Leitung gezielt um andere Elemente herumzuführen. Doppelklick auf
   einen Wegpunkt entfernt ihn, „Linie zurücksetzen" im Leitungs-Dialog
   entfernt alle Wegpunkte auf einmal.
+- **Leitungen beschriften:** Rechtsklick auf eine Leitung öffnet ein
+  Eingabefeld direkt an der Klickposition – Text eingeben, Enter drücken.
+  Die Bezeichnung erscheint sofort dort und lässt sich danach frei per
+  Ziehen platzieren (mit gestrichelter Führungslinie zur Leitung, wenn sie
+  weiter weg gesetzt wird). Rechtsklick auf eine bestehende Bezeichnung
+  ändert den Text.
 - **Nutzungsmodus**: Keine Änderungen möglich, es kann ausschließlich über
   den Button „↗ Webseite öffnen" auf jedem Element die hinterlegte(n)
   Webseite(n) in neuen Tabs geöffnet werden.

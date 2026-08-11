@@ -61,6 +61,7 @@ const ZOOM_MIN = 0.25, ZOOM_MAX = 2.5;
 let isPanning = false, panStart = { x: 0, y: 0 }, panOrigin = { x: 0, y: 0 };
 let draggingEl = null, dragOffset = { x: 0, y: 0 };
 let draggingWaypoint = null; // { connId, index } | null
+let draggingLabel = null; // { connId } | null
 let connectMode = false, connectFrom = null; // connectFrom = { id, port } | { id, port: null }
 let editingElementId = null;
 let editingConnId = null;
@@ -261,6 +262,9 @@ window.addEventListener("mousemove", (e) => {
   if (draggingWaypoint) {
     moveDraggingWaypoint(e);
   }
+  if (draggingLabel) {
+    moveDraggingLabel(e);
+  }
 });
 
 window.addEventListener("mouseup", () => {
@@ -276,6 +280,10 @@ window.addEventListener("mouseup", () => {
     draggingWaypoint = null;
     persistConfig();
   }
+  if (draggingLabel) {
+    draggingLabel = null;
+    persistConfig();
+  }
 });
 
 function moveDraggingWaypoint(e) {
@@ -286,6 +294,18 @@ function moveDraggingWaypoint(e) {
   const y = (e.clientY - rect.top - panY) / scale;
   conn.waypoints[draggingWaypoint.index] = { x, y };
   renderConnections();
+}
+
+function moveDraggingLabel(e) {
+  const conn = config.connections.find((c) => c.id === draggingLabel.connId);
+  if (!conn) return;
+  conn.label_at = clientToCanvas(e.clientX, e.clientY);
+  renderConnections();
+}
+
+function clientToCanvas(clientX, clientY) {
+  const rect = viewport.getBoundingClientRect();
+  return { x: (clientX - rect.left - panX) / scale, y: (clientY - rect.top - panY) / scale };
 }
 
 /* ------------------------------------------------------------------ */
@@ -713,6 +733,7 @@ function handleConnectPick(id, port) {
     color: selectedColor,
     thickness: 4,
     label: "",
+    label_at: null,
     waypoints: [],
   };
   config.connections.push(conn);
@@ -757,7 +778,7 @@ function renderConnections() {
 
     if (mode === "edit") {
       const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
-      title.textContent = "Klick: bearbeiten – Doppelklick: Wegpunkt hinzufuegen (fuer eigene Linienfuehrung)";
+      title.textContent = "Klick: bearbeiten – Doppelklick: Wegpunkt hinzufuegen – Rechtsklick: Bezeichnung hier setzen";
       hitbox.appendChild(title);
 
       let clickTimer = null;
@@ -772,21 +793,66 @@ function renderConnections() {
         if (connectMode) return;
         addWaypointAtEvent(conn, p1, p2, e);
       });
+      hitbox.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        clearTimeout(clickTimer);
+        if (connectMode) return;
+        const pt = clientToCanvas(e.clientX, e.clientY);
+        openInlineLabelEditor(conn, pt, e.clientX, e.clientY);
+      });
     }
 
     group.appendChild(hitbox);
     group.appendChild(visible);
 
     if (conn.label) {
-      const mid = pathMidpoint([p1, ...conn.waypoints, p2]);
+      const points = [p1, ...conn.waypoints, p2];
+      const isCustomPos = !!conn.label_at;
+      const labelPos = isCustomPos
+        ? conn.label_at
+        : { x: pathMidpoint(points).x, y: pathMidpoint(points).y - 8 };
+
+      // Gestrichelte Fuehrungslinie, wenn die Bezeichnung weiter von der
+      // Leitung weg platziert wurde, damit die Zuordnung erkennbar bleibt.
+      if (isCustomPos) {
+        const anchor = closestPointOnPolyline(points, labelPos);
+        if (Math.hypot(labelPos.x - anchor.x, labelPos.y - anchor.y) > 16) {
+          const leader = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          leader.setAttribute("x1", anchor.x);
+          leader.setAttribute("y1", anchor.y);
+          leader.setAttribute("x2", labelPos.x);
+          leader.setAttribute("y2", labelPos.y);
+          leader.setAttribute("class", "conn-label-leader");
+          leader.style.pointerEvents = "none";
+          group.appendChild(leader);
+        }
+      }
+
       const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      text.setAttribute("x", mid.x);
-      text.setAttribute("y", mid.y - 8);
+      text.setAttribute("x", labelPos.x);
+      text.setAttribute("y", labelPos.y);
       text.setAttribute("class", "conn-label");
       text.setAttribute("text-anchor", "middle");
       text.textContent = conn.label;
+
+      if (mode === "edit") {
+        const lTitle = document.createElementNS("http://www.w3.org/2000/svg", "title");
+        lTitle.textContent = "Ziehen: Bezeichnung frei platzieren – Rechtsklick: Text aendern";
+        text.appendChild(lTitle);
+        text.addEventListener("mousedown", (e) => {
+          e.stopPropagation();
+          draggingLabel = { connId: conn.id };
+        });
+        text.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openInlineLabelEditor(conn, labelPos, e.clientX, e.clientY);
+        });
+      }
+
       group.appendChild(text);
     }
+
 
     if (mode === "edit") {
       conn.waypoints.forEach((wp, idx) => {
@@ -910,6 +976,87 @@ function distToSegment(p, a, b) {
   return Math.hypot(p.x - projX, p.y - projY);
 }
 
+/* Naehester Punkt einer Punktfolge (Leitungsverlauf) zu einem gegebenen
+   Punkt – wird genutzt, um eine duenne Fuehrungslinie von der frei
+   platzierten Bezeichnung zur zugehoerigen Leitung zu zeichnen. */
+function closestPointOnPolyline(points, p) {
+  let best = points[0], bestDist = Infinity;
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i], b = points[i + 1];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const lenSq = dx * dx + dy * dy;
+    let t = lenSq === 0 ? 0 : ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    const proj = { x: a.x + t * dx, y: a.y + t * dy };
+    const d = Math.hypot(p.x - proj.x, p.y - proj.y);
+    if (d < bestDist) { bestDist = d; best = proj; }
+  }
+  return best;
+}
+
+/* ------------------------------------------------------------------ */
+/* Bezeichnung per Rechtsklick direkt an der Leitung anlegen           */
+/* ------------------------------------------------------------------ */
+
+function openInlineLabelEditor(conn, canvasPoint, clientX, clientY) {
+  removeInlineLabelEditor();
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "inline-label-input";
+  input.value = conn.label || "";
+  input.placeholder = "Bezeichnung...";
+  input.maxLength = 60;
+
+  // Position so waehlen, dass das Eingabefeld nicht ueber den Bildschirmrand hinausragt.
+  document.body.appendChild(input);
+  const inputWidth = 160;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const left = Math.min(Math.max(8, clientX - inputWidth / 2), vw - inputWidth - 8);
+  const top = Math.min(Math.max(8, clientY - 14), vh - 40);
+  input.style.left = left + "px";
+  input.style.top = top + "px";
+  input.style.width = inputWidth + "px";
+
+  input.focus();
+  input.select();
+
+  let done = false;
+  const commit = () => {
+    if (done) return;
+    done = true;
+    const val = input.value.trim();
+    conn.label = val;
+    conn.label_at = val ? canvasPoint : null;
+    removeInlineLabelEditor();
+    renderConnections();
+    persistConfig();
+  };
+  const cancel = () => {
+    if (done) return;
+    done = true;
+    removeInlineLabelEditor();
+  };
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); commit(); }
+    else if (e.key === "Escape") { e.preventDefault(); cancel(); }
+  });
+  input.addEventListener("blur", commit);
+  input.addEventListener("mousedown", (e) => e.stopPropagation());
+  input.addEventListener("click", (e) => e.stopPropagation());
+
+  inlineLabelInput = input;
+}
+
+function removeInlineLabelEditor() {
+  if (inlineLabelInput) {
+    inlineLabelInput.remove();
+    inlineLabelInput = null;
+  }
+}
+let inlineLabelInput = null;
+
 /* Faerbt jeden belegten Port-Andockpunkt in der Farbe seiner Verbindung ein,
    damit auf einen Blick erkennbar ist, welche Leitung an welchem Port haengt. */
 function markPortColors() {
@@ -994,6 +1141,7 @@ $("#cSave").addEventListener("click", () => {
   const conn = config.connections.find((c) => c.id === editingConnId);
   if (!conn) return;
   conn.label = $("#cLabel").value.trim();
+  if (!conn.label) conn.label_at = null;
   conn.thickness = parseInt($("#cThickness").value, 10);
   conn.color = selectedColor;
   $("#connModal").classList.add("hidden");
@@ -1067,6 +1215,7 @@ function bindGlobalEvents() {
       $("#elementModal").classList.add("hidden");
       $("#connModal").classList.add("hidden");
       $("#linksModal").classList.add("hidden");
+      removeInlineLabelEditor();
       if (connectMode) {
         connectMode = false;
         connectFrom = null;

@@ -412,6 +412,13 @@ body.use-mode .divider.edit-divider {
   stroke: var(--bg-0);
   stroke-width: 3px;
 }
+.edit-mode .conn-label { cursor: move; }
+.conn-label-leader {
+  stroke: var(--text-2);
+  stroke-width: 1.2px;
+  stroke-dasharray: 3 3;
+  opacity: 0.7;
+}
 .waypoint-handle {
   stroke: #ffffff;
   stroke-width: 1.5px;
@@ -566,3 +573,19 @@ body.use-mode .divider.edit-divider {
 }
 .link-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .link-item button { flex-shrink: 0; }
+
+/* Schwebendes Eingabefeld fuer die Rechtsklick-Schnellbeschriftung von Leitungen */
+.inline-label-input {
+  position: fixed;
+  z-index: 200;
+  background: var(--bg-2);
+  border: 1px solid var(--accent);
+  color: var(--text-0);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5), 0 0 0 3px rgba(58,214,255,0.15);
+  outline: none;
+}
+.inline-label-input::placeholder { color: var(--text-2); }

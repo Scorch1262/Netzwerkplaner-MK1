@@ -2,6 +2,28 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.4.0] – Verbindungs-Bezeichnungen einfacher anlegen und platzieren
+
+- **Rechtsklick zum Anlegen:** Ein Rechtsklick auf eine Leitung öffnet ein
+  kleines Eingabefeld direkt an der Klickposition. Text eingeben, Enter
+  drücken – fertig. Die Bezeichnung erscheint sofort genau dort, wo
+  geklickt wurde (kein Umweg mehr über den vollständigen Dialog nötig).
+- **Frei platzierbar:** Eine gesetzte Bezeichnung lässt sich anschließend
+  per Ziehen an eine beliebige Stelle verschieben (auch abseits der
+  Leitung, für bessere Lesbarkeit). Ist sie weiter von der Leitung entfernt
+  platziert, zeigt eine dünne gestrichelte Führungslinie die Zuordnung.
+- **Jederzeit nachbearbeitbar:** Rechtsklick direkt auf eine bestehende
+  Bezeichnung öffnet dasselbe Eingabefeld zum Ändern des Texts. Der
+  vollständige Verbindungs-Dialog (Klick auf die Leitung) bietet das
+  Textfeld weiterhin zusätzlich an.
+- Wird der Text geleert, verschwindet die Bezeichnung und ihre freie
+  Position wird zurückgesetzt (danach wieder automatisch mittig auf der
+  Leitung, sobald erneut ein Text gesetzt wird).
+- `config.json`: Jede Verbindung hat jetzt zusätzlich das Feld `label_at`
+  (`{x, y}` in Canvas-Koordinaten oder `null` für automatische Position auf
+  der Leitungsmitte). Bestehende Konfigurationen ohne dieses Feld
+  funktionieren unverändert weiter.
+
 ## [1.3.0] – Leitungsführung: weniger Verknoten, manuell anpassbar
 
 - **Richtungsbasiertes Auto-Routing:** Leitungen, die an einem konkreten
