@@ -778,27 +778,21 @@ function renderConnections() {
 
     if (mode === "edit") {
       const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
-      title.textContent = "Klick: bearbeiten – Doppelklick: Wegpunkt hinzufuegen – Rechtsklick: Bezeichnung hier setzen";
+      title.textContent = "Klick: Details bearbeiten – Doppelklick: Name/Farbe/Entfernen";
       hitbox.appendChild(title);
 
       let clickTimer = null;
       hitbox.addEventListener("click", () => {
         if (connectMode) return;
         clearTimeout(clickTimer);
-        clickTimer = setTimeout(() => openConnModal(conn.id), 220);
+        clickTimer = setTimeout(() => openConnModal(conn.id), 250);
       });
       hitbox.addEventListener("dblclick", (e) => {
         e.preventDefault();
         clearTimeout(clickTimer);
         if (connectMode) return;
-        addWaypointAtEvent(conn, p1, p2, e);
-      });
-      hitbox.addEventListener("contextmenu", (e) => {
-        e.preventDefault();
-        clearTimeout(clickTimer);
-        if (connectMode) return;
         const pt = clientToCanvas(e.clientX, e.clientY);
-        openInlineLabelEditor(conn, pt, e.clientX, e.clientY);
+        openConnContextMenu(conn, pt, e.clientX, e.clientY);
       });
     }
 
@@ -837,16 +831,17 @@ function renderConnections() {
 
       if (mode === "edit") {
         const lTitle = document.createElementNS("http://www.w3.org/2000/svg", "title");
-        lTitle.textContent = "Ziehen: Bezeichnung frei platzieren – Rechtsklick: Text aendern";
+        lTitle.textContent = "Ziehen: Bezeichnung frei platzieren – Doppelklick: Name/Farbe/Entfernen";
         text.appendChild(lTitle);
         text.addEventListener("mousedown", (e) => {
           e.stopPropagation();
           draggingLabel = { connId: conn.id };
         });
-        text.addEventListener("contextmenu", (e) => {
+        text.addEventListener("dblclick", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          openInlineLabelEditor(conn, labelPos, e.clientX, e.clientY);
+          const pt = clientToCanvas(e.clientX, e.clientY);
+          openConnContextMenu(conn, pt, e.clientX, e.clientY);
         });
       }
 
@@ -947,26 +942,6 @@ function pathMidpoint(points) {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
-/* Fuegt beim Doppelklick auf eine Leitung an der geklickten Stelle einen
-   neuen, frei verschiebbaren Wegpunkt ein (an der naechstgelegenen
-   Teilstrecke), damit die Leitung gezielt umgeleitet werden kann. */
-function addWaypointAtEvent(conn, p1, p2, e) {
-  const rect = viewport.getBoundingClientRect();
-  const click = {
-    x: (e.clientX - rect.left - panX) / scale,
-    y: (e.clientY - rect.top - panY) / scale,
-  };
-  const pts = [p1, ...conn.waypoints, p2];
-  let bestIdx = 0, bestDist = Infinity;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const d = distToSegment(click, pts[i], pts[i + 1]);
-    if (d < bestDist) { bestDist = d; bestIdx = i; }
-  }
-  conn.waypoints.splice(bestIdx, 0, click);
-  renderConnections();
-  persistConfig();
-}
-
 function distToSegment(p, a, b) {
   const dx = b.x - a.x, dy = b.y - a.y;
   const lenSq = dx * dx + dy * dy;
@@ -995,67 +970,172 @@ function closestPointOnPolyline(points, p) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Bezeichnung per Rechtsklick direkt an der Leitung anlegen           */
+/* Kontextmenue fuer Verbindungen (Doppelklick im Bearbeitungsmodus):  */
+/* Name vergeben, Farbe aendern, Wegpunkt einfuegen, Leitung entfernen */
 /* ------------------------------------------------------------------ */
 
-function openInlineLabelEditor(conn, canvasPoint, clientX, clientY) {
-  removeInlineLabelEditor();
+let connCtxMenuEl = null;
+let connCtxOutsideHandler = null;
 
-  const input = document.createElement("input");
-  input.type = "text";
-  input.className = "inline-label-input";
-  input.value = conn.label || "";
-  input.placeholder = "Bezeichnung...";
-  input.maxLength = 60;
+function currentConnPoints(conn) {
+  const fromEl = config.elements.find((x) => x.id === conn.from);
+  const toEl = config.elements.find((x) => x.id === conn.to);
+  if (!fromEl || !toEl) return [];
+  const p1 = connectionEndpoint(fromEl, conn.from_port);
+  const p2 = connectionEndpoint(toEl, conn.to_port);
+  return [p1, ...(conn.waypoints || []), p2];
+}
 
-  // Position so waehlen, dass das Eingabefeld nicht ueber den Bildschirmrand hinausragt.
-  document.body.appendChild(input);
-  const inputWidth = 160;
-  const vw = window.innerWidth, vh = window.innerHeight;
-  const left = Math.min(Math.max(8, clientX - inputWidth / 2), vw - inputWidth - 8);
-  const top = Math.min(Math.max(8, clientY - 14), vh - 40);
-  input.style.left = left + "px";
-  input.style.top = top + "px";
-  input.style.width = inputWidth + "px";
+function openConnContextMenu(conn, canvasPoint, clientX, clientY) {
+  closeConnContextMenu();
 
-  input.focus();
-  input.select();
+  const menu = document.createElement("div");
+  menu.className = "conn-ctx-menu";
+  menu.addEventListener("mousedown", (e) => e.stopPropagation());
+  menu.addEventListener("click", (e) => e.stopPropagation());
+  menu.addEventListener("dblclick", (e) => e.stopPropagation());
+  menu.style.visibility = "hidden";
 
-  let done = false;
-  const commit = () => {
-    if (done) return;
-    done = true;
-    const val = input.value.trim();
-    conn.label = val;
-    conn.label_at = val ? canvasPoint : null;
-    removeInlineLabelEditor();
+  // --- Name ---
+  const nameLabel = document.createElement("div");
+  nameLabel.className = "ctx-menu-label";
+  nameLabel.textContent = "Bezeichnung";
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.className = "ctx-name-input";
+  nameInput.placeholder = "z. B. Uplink, 1 GbE …";
+  nameInput.maxLength = 60;
+  nameInput.value = conn.label || "";
+  nameInput.addEventListener("input", () => {
+    conn.label = nameInput.value.trim();
+    if (!conn.label) conn.label_at = null;
+    renderConnectionsPreserving(menu);
+  });
+  nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); closeConnContextMenu(); }
+    if (e.key === "Escape") { e.preventDefault(); closeConnContextMenu(); }
+  });
+
+  // --- Farbe ---
+  const colorLabel = document.createElement("div");
+  colorLabel.className = "ctx-menu-label";
+  colorLabel.textContent = "Farbe";
+  const colorRow = document.createElement("div");
+  colorRow.className = "ctx-color-row";
+  CONNECTION_COLORS.forEach((color) => {
+    const sw = document.createElement("div");
+    sw.className = "color-swatch ctx-swatch" + (conn.color === color ? " selected" : "");
+    sw.style.background = color;
+    sw.addEventListener("click", () => {
+      conn.color = color;
+      colorRow.querySelectorAll(".ctx-swatch").forEach((s) => s.classList.remove("selected"));
+      sw.classList.add("selected");
+      colorInput.value = color;
+      renderConnectionsPreserving(menu);
+    });
+    colorRow.appendChild(sw);
+  });
+  const colorInput = document.createElement("input");
+  colorInput.type = "color";
+  colorInput.className = "ctx-color-input";
+  colorInput.value = /^#[0-9a-f]{6}$/i.test(conn.color || "") ? conn.color : "#3ad6ff";
+  colorInput.addEventListener("input", () => {
+    conn.color = colorInput.value;
+    colorRow.querySelectorAll(".ctx-swatch").forEach((s) => s.classList.remove("selected"));
+    renderConnectionsPreserving(menu);
+  });
+  colorRow.appendChild(colorInput);
+
+  // --- Aktionen ---
+  const actions = document.createElement("div");
+  actions.className = "ctx-actions";
+
+  const waypointBtn = document.createElement("button");
+  waypointBtn.className = "btn ctx-btn";
+  waypointBtn.type = "button";
+  waypointBtn.textContent = "+ Wegpunkt hier";
+  waypointBtn.title = "Fuegt an dieser Stelle einen verschiebbaren Wegpunkt zur Linienfuehrung hinzu";
+  waypointBtn.addEventListener("click", () => {
+    const points = currentConnPoints(conn);
+    let bestIdx = 0, bestDist = Infinity;
+    for (let i = 0; i < points.length - 1; i++) {
+      const d = distToSegment(canvasPoint, points[i], points[i + 1]);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+    if (!Array.isArray(conn.waypoints)) conn.waypoints = [];
+    conn.waypoints.splice(bestIdx, 0, canvasPoint);
+    closeConnContextMenu();
+  });
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.className = "btn btn-danger ctx-btn";
+  deleteBtn.type = "button";
+  deleteBtn.textContent = "Entfernen";
+  deleteBtn.addEventListener("click", () => {
+    if (!confirm("Diese Verbindung wirklich entfernen?")) return;
+    config.connections = config.connections.filter((c) => c.id !== conn.id);
+    closeConnContextMenu(true);
     renderConnections();
     persistConfig();
-  };
-  const cancel = () => {
-    if (done) return;
-    done = true;
-    removeInlineLabelEditor();
-  };
-
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); commit(); }
-    else if (e.key === "Escape") { e.preventDefault(); cancel(); }
   });
-  input.addEventListener("blur", commit);
-  input.addEventListener("mousedown", (e) => e.stopPropagation());
-  input.addEventListener("click", (e) => e.stopPropagation());
 
-  inlineLabelInput = input;
+  actions.appendChild(waypointBtn);
+  actions.appendChild(deleteBtn);
+
+  menu.appendChild(nameLabel);
+  menu.appendChild(nameInput);
+  menu.appendChild(colorLabel);
+  menu.appendChild(colorRow);
+  menu.appendChild(actions);
+  document.body.appendChild(menu);
+
+  // Position an der Klickstelle, an den Bildschirmrand geklemmt
+  const menuWidth = 220;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const menuHeight = menu.offsetHeight || 160;
+  const left = Math.min(Math.max(8, clientX - menuWidth / 2), vw - menuWidth - 8);
+  const top = Math.min(Math.max(8, clientY + 12), vh - menuHeight - 8);
+  menu.style.left = left + "px";
+  menu.style.top = top + "px";
+  menu.style.width = menuWidth + "px";
+  menu.style.visibility = "visible";
+
+  nameInput.focus();
+  nameInput.select();
+
+  connCtxMenuEl = menu;
+
+  setTimeout(() => {
+    connCtxOutsideHandler = (e) => {
+      if (menu.contains(e.target)) return;
+      closeConnContextMenu();
+    };
+    document.addEventListener("mousedown", connCtxOutsideHandler, true);
+  }, 0);
 }
 
-function removeInlineLabelEditor() {
-  if (inlineLabelInput) {
-    inlineLabelInput.remove();
-    inlineLabelInput = null;
+function closeConnContextMenu(skipPersist) {
+  if (connCtxOutsideHandler) {
+    document.removeEventListener("mousedown", connCtxOutsideHandler, true);
+    connCtxOutsideHandler = null;
+  }
+  const hadMenu = !!connCtxMenuEl;
+  if (connCtxMenuEl) {
+    connCtxMenuEl.remove();
+    connCtxMenuEl = null;
+  }
+  renderConnections();
+  if (hadMenu && !skipPersist) {
+    persistConfig();
   }
 }
-let inlineLabelInput = null;
+
+/* Rendert die Verbindungen neu, ohne das offene Kontextmenue (eigenes
+   DOM-Element ausserhalb des SVG) zu beruehren – fuer Live-Vorschau
+   waehrend der Eingabe. */
+function renderConnectionsPreserving() {
+  renderConnections();
+}
 
 /* Faerbt jeden belegten Port-Andockpunkt in der Farbe seiner Verbindung ein,
    damit auf einen Blick erkennbar ist, welche Leitung an welchem Port haengt. */
@@ -1215,7 +1295,7 @@ function bindGlobalEvents() {
       $("#elementModal").classList.add("hidden");
       $("#connModal").classList.add("hidden");
       $("#linksModal").classList.add("hidden");
-      removeInlineLabelEditor();
+      if (connCtxMenuEl) closeConnContextMenu();
       if (connectMode) {
         connectMode = false;
         connectFrom = null;

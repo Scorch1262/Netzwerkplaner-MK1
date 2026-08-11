@@ -1,6 +1,6 @@
 # Netzwerkplan
 
-**Aktuelle Version: 1.4.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.5.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -154,17 +154,20 @@ solange gültiges JSON erhalten bleibt.
   (Farbe/Stärke/Bezeichnung im Klick auf die Linie einstellbar).
   Bei Switch/Router/Patchfeld lassen sich die Ports über die Buttons „⟳"
   (Seite drehen) und „⇋" (Reihenfolge spiegeln) am Element ausrichten.
-- **Leitungen umlegen:** Ein Doppelklick auf eine Leitung setzt dort einen
-  verschiebbaren Wegpunkt; beliebig viele Wegpunkte lassen sich ziehen, um
-  die Leitung gezielt um andere Elemente herumzuführen. Doppelklick auf
-  einen Wegpunkt entfernt ihn, „Linie zurücksetzen" im Leitungs-Dialog
-  entfernt alle Wegpunkte auf einmal.
-- **Leitungen beschriften:** Rechtsklick auf eine Leitung öffnet ein
-  Eingabefeld direkt an der Klickposition – Text eingeben, Enter drücken.
-  Die Bezeichnung erscheint sofort dort und lässt sich danach frei per
-  Ziehen platzieren (mit gestrichelter Führungslinie zur Leitung, wenn sie
-  weiter weg gesetzt wird). Rechtsklick auf eine bestehende Bezeichnung
-  ändert den Text.
+- **Leitungen bearbeiten:** Doppelklick auf eine Leitung (oder auf ihre
+  Bezeichnung) öffnet ein Kontextmenü direkt an der Klickposition, um die
+  Bezeichnung zu ändern, die Farbe anzupassen, einen Wegpunkt an dieser
+  Stelle einzufügen oder die Leitung einzeln zu entfernen. Ein einfacher
+  Klick auf die Leitung öffnet den vollständigen Dialog mit zusätzlicher
+  Einstellung für die Leitungsstärke und „Linie zurücksetzen" (entfernt
+  alle Wegpunkte auf einmal).
+- **Leitungen umlegen:** Über „+ Wegpunkt hier" im Kontextmenü lassen sich
+  frei verschiebbare Wegpunkte setzen, um die Leitung gezielt um andere
+  Elemente herumzuführen. Doppelklick auf einen vorhandenen Wegpunkt
+  entfernt ihn wieder.
+- **Bezeichnung platzieren:** Eine gesetzte Bezeichnung lässt sich per
+  Ziehen frei verschieben (mit gestrichelter Führungslinie zur Leitung,
+  wenn sie weiter weg gesetzt wird).
 - **Nutzungsmodus**: Keine Änderungen möglich, es kann ausschließlich über
   den Button „↗ Webseite öffnen" auf jedem Element die hinterlegte(n)
   Webseite(n) in neuen Tabs geöffnet werden.

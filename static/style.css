@@ -574,18 +574,49 @@ body.use-mode .divider.edit-divider {
 .link-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .link-item button { flex-shrink: 0; }
 
-/* Schwebendes Eingabefeld fuer die Rechtsklick-Schnellbeschriftung von Leitungen */
-.inline-label-input {
+/* Kontextmenue fuer Verbindungen (Doppelklick auf eine Leitung im Bearbeitungsmodus) */
+.conn-ctx-menu {
   position: fixed;
   z-index: 200;
   background: var(--bg-2);
   border: 1px solid var(--accent);
-  color: var(--text-0);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  padding: 5px 8px;
-  border-radius: 4px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.5), 0 0 0 3px rgba(58,214,255,0.15);
-  outline: none;
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.55), 0 0 0 3px rgba(58,214,255,0.12);
 }
-.inline-label-input::placeholder { color: var(--text-2); }
+.ctx-menu-label {
+  font-size: 10.5px;
+  letter-spacing: 0.4px;
+  color: var(--text-2);
+  margin: 8px 0 4px 0;
+  text-transform: uppercase;
+}
+.ctx-menu-label:first-child { margin-top: 0; }
+.ctx-name-input {
+  width: 100%;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  color: var(--text-0);
+  border-radius: 4px;
+  padding: 7px 8px;
+  font-family: var(--font-main);
+  font-size: 12.5px;
+}
+.ctx-name-input:focus { outline: none; border-color: var(--accent); }
+.ctx-color-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.ctx-color-row .color-swatch { width: 20px; height: 20px; }
+.ctx-color-input {
+  width: 28px;
+  height: 20px;
+  padding: 1px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-1);
+  cursor: pointer;
+}
+.ctx-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+.ctx-btn { flex: 1; font-size: 11px; padding: 7px 6px; text-align: center; }

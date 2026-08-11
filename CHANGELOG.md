@@ -2,6 +2,29 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.5.0] – Verbindungs-Kontextmenü (Name, Farbe, Entfernen)
+
+- **Behoben:** Die Rechtsklick-Schnellbeschriftung aus v1.4.0 funktionierte
+  nicht zuverlässig und wurde vollständig entfernt.
+- **Neu – Kontextmenü per Doppelklick:** Ein Doppelklick auf eine Leitung
+  (oder auf ihre Bezeichnung) öffnet im Bearbeitungsmodus jetzt ein kleines
+  Menü direkt an der Klickposition mit:
+  - Textfeld für die **Bezeichnung** (Änderung wird sofort auf der Leitung
+    live angezeigt),
+  - **Farbauswahl** (Presets + freier Farbwähler),
+  - Button **„+ Wegpunkt hier"**, um an dieser Stelle die Linienführung
+    anzupassen,
+  - Button **„Entfernen"**, um genau diese Leitung einzeln zu löschen
+    (mit Sicherheitsabfrage).
+- Das Menü schließt sich automatisch (und speichert dabei) bei Klick
+  außerhalb, bei Escape oder bei Enter im Namensfeld.
+- Der vollständige Verbindungs-Dialog (einfacher Klick auf die Leitung)
+  bleibt zusätzlich verfügbar für Leitungsstärke und „Linie zurücksetzen"
+  (alle Wegpunkte auf einmal entfernen) und besitzt ebenfalls einen
+  „Löschen"-Button.
+- Damit sind Leitungen jetzt auf zwei Wegen einzeln entfernbar: schnell
+  über das neue Doppelklick-Kontextmenü oder über den vollständigen Dialog.
+
 ## [1.4.0] – Verbindungs-Bezeichnungen einfacher anlegen und platzieren
 
 - **Rechtsklick zum Anlegen:** Ein Rechtsklick auf eine Leitung öffnet ein
