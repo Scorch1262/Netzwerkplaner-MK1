@@ -1,5 +1,5 @@
 
-![Bild](Unbenannt.PNG)!
+![Bild](Unbenannt.PNG)
 
 # Netzwerkplan
 
