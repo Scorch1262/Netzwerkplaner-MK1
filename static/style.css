@@ -315,6 +315,16 @@ body.use-mode .divider.edit-divider {
   white-space: nowrap;
   margin-bottom: 6px;
 }
+.el-ip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: -3px 0 6px 0;
+  letter-spacing: 0.2px;
+}
 .el-link-btn {
   width: 100%;
   background: var(--bg-1);
@@ -427,6 +437,23 @@ body.use-mode .divider.edit-divider {
 }
 .waypoint-handle:hover { stroke-width: 2.5px; }
 .waypoint-handle:active { cursor: grabbing; }
+
+/* Bearbeiten-Button an jeder Leitung (analog zum ✎ an Elementen) */
+.conn-edit-btn { cursor: pointer; }
+.conn-edit-btn circle {
+  fill: var(--bg-1);
+  stroke: var(--border);
+  stroke-width: 1px;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6));
+}
+.conn-edit-btn text {
+  font-size: 10px;
+  fill: var(--text-1);
+  pointer-events: none;
+  user-select: none;
+}
+.conn-edit-btn:hover circle { fill: var(--accent-dim); stroke: var(--accent); }
+.conn-edit-btn:hover text { fill: #eafcff; }
 
 /* ---------------- Statusbar ---------------- */
 

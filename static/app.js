@@ -308,6 +308,11 @@ function clientToCanvas(clientX, clientY) {
   return { x: (clientX - rect.left - panX) / scale, y: (clientY - rect.top - panY) / scale };
 }
 
+function canvasToClient(point) {
+  const rect = viewport.getBoundingClientRect();
+  return { x: rect.left + panX + point.x * scale, y: rect.top + panY + point.y * scale };
+}
+
 /* ------------------------------------------------------------------ */
 /* Elemente: Rendern                                                   */
 /* ------------------------------------------------------------------ */
@@ -337,6 +342,7 @@ function buildElementNode(el) {
   const portCount = getPortCount(el);
   const side = getPortSide(el);
   const mirrored = getPortMirror(el);
+  const hostDisplay = getElementHost(el);
 
   if (portCount > 0) {
     node.classList.add("has-ports", "side-" + side);
@@ -354,6 +360,7 @@ function buildElementNode(el) {
       </div>
     </div>
     <div class="el-location">${escapeHtml(el.location || "")}</div>
+    ${hostDisplay ? `<div class="el-ip" title="Eingestellte IP / Adresse">IP: ${escapeHtml(hostDisplay)}</div>` : ""}
     <button class="el-link-btn" ${hasLinks ? "" : "disabled"}>↗ Webseite oeffnen</button>
   `;
   node.appendChild(body);
@@ -489,6 +496,22 @@ function escapeHtml(str) {
   const d = document.createElement("div");
   d.textContent = str ?? "";
   return d.innerHTML;
+}
+
+/* Extrahiert Host/IP aus der ersten hinterlegten Webseite eines Elements,
+   damit die eingestellte IP direkt am Element sichtbar ist (ohne den
+   Bearbeiten-Dialog oeffnen zu muessen). Funktioniert mit vollstaendigen
+   URLs (https://192.168.1.2/admin) ebenso wie mit reinen Host-/IP-Angaben
+   ohne Schema (192.168.1.2). */
+function getElementHost(el) {
+  const link = (el.links || []).find(Boolean);
+  if (!link) return "";
+  try {
+    return new URL(link).hostname;
+  } catch (e) {
+    const m = link.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/([^/:?#]+)/) || link.match(/^([^/:?#\s]+)/);
+    return m ? m[1] : "";
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -778,21 +801,12 @@ function renderConnections() {
 
     if (mode === "edit") {
       const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
-      title.textContent = "Klick: Details bearbeiten – Doppelklick: Name/Farbe/Entfernen";
+      title.textContent = "Klick: Details bearbeiten (Staerke, Wegpunkte zuruecksetzen, Loeschen)";
       hitbox.appendChild(title);
 
-      let clickTimer = null;
       hitbox.addEventListener("click", () => {
         if (connectMode) return;
-        clearTimeout(clickTimer);
-        clickTimer = setTimeout(() => openConnModal(conn.id), 250);
-      });
-      hitbox.addEventListener("dblclick", (e) => {
-        e.preventDefault();
-        clearTimeout(clickTimer);
-        if (connectMode) return;
-        const pt = clientToCanvas(e.clientX, e.clientY);
-        openConnContextMenu(conn, pt, e.clientX, e.clientY);
+        openConnModal(conn.id);
       });
     }
 
@@ -831,21 +845,55 @@ function renderConnections() {
 
       if (mode === "edit") {
         const lTitle = document.createElementNS("http://www.w3.org/2000/svg", "title");
-        lTitle.textContent = "Ziehen: Bezeichnung frei platzieren – Doppelklick: Name/Farbe/Entfernen";
+        lTitle.textContent = "Ziehen: Bezeichnung frei platzieren";
         text.appendChild(lTitle);
         text.addEventListener("mousedown", (e) => {
           e.stopPropagation();
           draggingLabel = { connId: conn.id };
         });
-        text.addEventListener("dblclick", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const pt = clientToCanvas(e.clientX, e.clientY);
-          openConnContextMenu(conn, pt, e.clientX, e.clientY);
-        });
       }
 
       group.appendChild(text);
+    }
+
+    /* Fester Bearbeiten-Button an der Leitung (wie das ✎ an den Elementen):
+       oeffnet zuverlaessig das Kontextmenue mit Name/Farbe/Wegpunkt/Entfernen,
+       ganz ohne Doppelklick-Erkennung. */
+    if (mode === "edit") {
+      const points = [p1, ...conn.waypoints, p2];
+      const mid = pathMidpoint(points);
+      const btnPos = { x: mid.x, y: mid.y + 16 };
+
+      const editBtnGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      editBtnGroup.setAttribute("class", "conn-edit-btn");
+
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", btnPos.x);
+      circle.setAttribute("cy", btnPos.y);
+      circle.setAttribute("r", 10);
+
+      const icon = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      icon.setAttribute("x", btnPos.x);
+      icon.setAttribute("y", btnPos.y + 3.5);
+      icon.setAttribute("text-anchor", "middle");
+      icon.textContent = "✎";
+
+      const btnTitle = document.createElementNS("http://www.w3.org/2000/svg", "title");
+      btnTitle.textContent = "Verbindung bearbeiten: Name, Farbe, Wegpunkt, Entfernen";
+
+      editBtnGroup.appendChild(circle);
+      editBtnGroup.appendChild(icon);
+      editBtnGroup.appendChild(btnTitle);
+
+      editBtnGroup.addEventListener("mousedown", (e) => e.stopPropagation());
+      editBtnGroup.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (connectMode) return;
+        const clientPos = canvasToClient(btnPos);
+        openConnContextMenu(conn, btnPos, clientPos.x, clientPos.y);
+      });
+
+      group.appendChild(editBtnGroup);
     }
 
 

@@ -2,6 +2,26 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.6.0] – Zuverlässiger Bearbeiten-Button an Leitungen, IP-Anzeige an Elementen
+
+- **Behoben:** Das Doppelklick-Kontextmenü aus v1.5.0 hat nicht zuverlässig
+  funktioniert (Race Condition: Wenn der zweite Klick etwas später als das
+  interne Zeitfenster kam, öffnete sich stattdessen bereits der
+  vollständige Dialog und "schluckte" den Doppelklick). Die komplette
+  Doppelklick-Erkennung an Leitungen wurde entfernt.
+- **Neu – fester Bearbeiten-Button je Leitung:** Jede Leitung zeigt jetzt
+  im Bearbeitungsmodus einen eigenen „✎"-Button (wie schon an den
+  Elementen), der zuverlässig mit einem einzelnen Klick das Menü für Name,
+  Farbe, „+ Wegpunkt hier" und „Entfernen" öffnet.
+- Ein Klick auf die Leitung selbst öffnet weiterhin sofort (ohne Verzögerung)
+  den vollständigen Dialog für Stärke und „Linie zurücksetzen".
+- **Neu – IP-Anzeige an Elementen:** Jedes Element zeigt jetzt automatisch
+  die aus der ersten hinterlegten Webseite extrahierte IP-Adresse bzw.
+  den Hostnamen direkt auf der Karte an (z. B. „IP: 192.168.1.2"), ganz
+  ohne den Bearbeiten-Dialog öffnen zu müssen. Funktioniert sowohl mit
+  vollständigen URLs (`https://192.168.1.2/admin`) als auch mit reinen
+  Host-/IP-Angaben ohne Schema.
+
 ## [1.5.0] – Verbindungs-Kontextmenü (Name, Farbe, Entfernen)
 
 - **Behoben:** Die Rechtsklick-Schnellbeschriftung aus v1.4.0 funktionierte

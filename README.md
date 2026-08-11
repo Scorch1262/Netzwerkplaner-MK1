@@ -1,6 +1,6 @@
 # Netzwerkplan
 
-**Aktuelle Version: 1.5.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.6.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -154,13 +154,13 @@ solange gültiges JSON erhalten bleibt.
   (Farbe/Stärke/Bezeichnung im Klick auf die Linie einstellbar).
   Bei Switch/Router/Patchfeld lassen sich die Ports über die Buttons „⟳"
   (Seite drehen) und „⇋" (Reihenfolge spiegeln) am Element ausrichten.
-- **Leitungen bearbeiten:** Doppelklick auf eine Leitung (oder auf ihre
-  Bezeichnung) öffnet ein Kontextmenü direkt an der Klickposition, um die
+- **Leitungen bearbeiten:** Jede Leitung zeigt im Bearbeitungsmodus einen
+  eigenen „✎"-Button (wie an den Elementen), der ein Menü öffnet, um die
   Bezeichnung zu ändern, die Farbe anzupassen, einen Wegpunkt an dieser
-  Stelle einzufügen oder die Leitung einzeln zu entfernen. Ein einfacher
-  Klick auf die Leitung öffnet den vollständigen Dialog mit zusätzlicher
-  Einstellung für die Leitungsstärke und „Linie zurücksetzen" (entfernt
-  alle Wegpunkte auf einmal).
+  Stelle einzufügen oder die Leitung einzeln zu entfernen. Ein Klick auf
+  die Leitung selbst öffnet direkt den vollständigen Dialog mit
+  zusätzlicher Einstellung für die Leitungsstärke und „Linie zurücksetzen"
+  (entfernt alle Wegpunkte auf einmal).
 - **Leitungen umlegen:** Über „+ Wegpunkt hier" im Kontextmenü lassen sich
   frei verschiebbare Wegpunkte setzen, um die Leitung gezielt um andere
   Elemente herumzuführen. Doppelklick auf einen vorhandenen Wegpunkt
@@ -173,5 +173,8 @@ solange gültiges JSON erhalten bleibt.
   Webseite(n) in neuen Tabs geöffnet werden.
 - **Zoom/Pan**: Mausrad zum Zoomen, Ziehen auf leerer Fläche zum Verschieben
   der Ansicht, +/−/⤢ oben rechts als Alternative.
+- **IP-Anzeige:** Jedes Element zeigt automatisch die aus der ersten
+  hinterlegten Webseite extrahierte IP-Adresse bzw. den Hostnamen direkt
+  auf der Karte an (z. B. „IP: 192.168.1.2").
 - **Speichern**: Über den Button „Speichern" oder automatisch nach jeder
   Änderung (Elemente, Verbindungen) sowie leicht verzögert nach Zoom/Pan.
