@@ -2,6 +2,26 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.8.0] – Mehrere benennbare Webseiten-Schaltflächen je Element
+
+- **Neu:** Ein Element kann jetzt mehrere Webseiten hinterlegt bekommen,
+  von denen **jede eine eigene, frei benennbare Schaltfläche direkt auf
+  dem Element** bekommt (z. B. „↗ Admin-Oberfläche", „↗ Grafana",
+  „↗ Doku") – statt eines einzelnen generischen „Webseite"-Buttons mit
+  Untermenü.
+- Der Element-Dialog (✎) hat dafür eine neue Liste: pro Webseite ein Feld
+  für **Bezeichnung** und ein Feld für die **URL**, mit „✕" zum Entfernen
+  einzelner Einträge und „+ Webseite hinzufügen" für weitere. Bleibt die
+  Bezeichnung leer, zeigt die Schaltfläche „Webseite 1", „Webseite 2" usw.
+- Das bisherige Auswahl-Popup für mehrere Links (Nutzungsmodus) entfällt
+  dadurch – jede Webseite ist jetzt direkt als eigene Schaltfläche
+  sichtbar und mit einem Klick erreichbar.
+- `config.json`: `links` je Element ist jetzt eine Liste von
+  `{ "label": "...", "url": "..." }`-Objekten statt reiner URL-Strings.
+  **Abwärtskompatibel:** Bestehende Konfigurationen mit dem alten Format
+  (reine URL-Strings) funktionieren unverändert weiter und werden beim
+  nächsten Bearbeiten automatisch in das neue Format überführt.
+
 ## [1.7.1] – Kürzerer Button-Text, Portnamen immer sichtbar
 
 - Der Button „↗ Webseite öffnen" an jedem Element heißt jetzt kürzer

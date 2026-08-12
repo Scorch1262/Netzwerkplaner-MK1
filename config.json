@@ -22,7 +22,10 @@
       "x": 400,
       "y": 120,
       "links": [
-        "https://192.168.1.1"
+        {
+          "label": "Admin-Oberflaeche",
+          "url": "https://192.168.1.1"
+        }
       ]
     },
     {
@@ -47,7 +50,14 @@
       "x": 700,
       "y": 320,
       "links": [
-        "https://192.168.1.10"
+        {
+          "label": "Dateifreigabe",
+          "url": "https://192.168.1.10"
+        },
+        {
+          "label": "Admin-Konsole",
+          "url": "https://192.168.1.10:8443/admin"
+        }
       ]
     }
   ],

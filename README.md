@@ -3,7 +3,7 @@
 
 # Netzwerkplan
 
-**Aktuelle Version: 1.7.1** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.8.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -180,9 +180,13 @@ solange gültiges JSON erhalten bleibt.
 - **Bezeichnung platzieren:** Eine gesetzte Bezeichnung lässt sich per
   Ziehen frei verschieben (mit gestrichelter Führungslinie zur Leitung,
   wenn sie weiter weg gesetzt wird).
-- **Nutzungsmodus**: Keine Änderungen möglich, es kann ausschließlich über
-  den Button „↗ Webseite" auf jedem Element die hinterlegte(n)
-  Webseite(n) in neuen Tabs geöffnet werden.
+- **Mehrere Webseiten je Element:** Im Element-Dialog lassen sich beliebig
+  viele Webseiten mit eigener Bezeichnung hinterlegen („+ Webseite
+  hinzufügen"). Jede erscheint als eigene, benannte Schaltfläche direkt
+  auf dem Element (z. B. „↗ Admin-Oberfläche", „↗ Grafana").
+- **Nutzungsmodus**: Keine Änderungen möglich, es können ausschließlich
+  über die Webseiten-Schaltflächen auf jedem Element die hinterlegten
+  Seiten in neuen Tabs geöffnet werden.
 - **Zoom/Pan**: Mausrad zum Zoomen, Ziehen auf leerer Fläche zum Verschieben
   der Ansicht, +/−/⤢ oben rechts als Alternative.
 - **IP-Anzeige:** Jedes Element zeigt automatisch die aus der ersten

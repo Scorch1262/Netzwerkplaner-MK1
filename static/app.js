@@ -420,7 +420,7 @@ function buildElementNode(el) {
   node.style.top = el.y + "px";
   if (selectedElementIds.has(el.id)) node.classList.add("multi-selected");
 
-  const hasLinks = Array.isArray(el.links) && el.links.filter(Boolean).length > 0;
+  const elLinks = normalizeLinks(el.links);
   const portCount = getPortCount(el);
   const side = getPortSide(el);
   const mirrored = getPortMirror(el);
@@ -443,9 +443,25 @@ function buildElementNode(el) {
     </div>
     <div class="el-location">${escapeHtml(el.location || "")}</div>
     ${hostDisplay ? `<div class="el-ip" title="Eingestellte IP / Adresse">IP: ${escapeHtml(hostDisplay)}</div>` : ""}
-    <button class="el-link-btn" ${hasLinks ? "" : "disabled"}>↗ Webseite</button>
   `;
   node.appendChild(body);
+
+  if (elLinks.length > 0) {
+    const linksWrap = document.createElement("div");
+    linksWrap.className = "el-links";
+    elLinks.forEach((link, i) => {
+      const btn = document.createElement("button");
+      btn.className = "el-link-btn";
+      btn.textContent = "↗ " + (link.label || "Webseite " + (i + 1));
+      btn.title = link.url;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        window.open(link.url, "_blank", "noopener");
+      });
+      linksWrap.appendChild(btn);
+    });
+    body.appendChild(linksWrap);
+  }
 
   if (mode === "edit") {
     const controls = document.createElement("div");
@@ -488,11 +504,6 @@ function buildElementNode(el) {
 
     body.appendChild(controls);
   }
-
-  body.querySelector(".el-link-btn").addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (hasLinks) openLinks(el);
-  });
 
   node.addEventListener("mousedown", (e) => {
     if (e.target.closest(".el-link-btn") || e.target.closest(".el-ctrl-btn")) return;
@@ -658,13 +669,28 @@ function escapeHtml(str) {
    Bearbeiten-Dialog oeffnen zu muessen). Funktioniert mit vollstaendigen
    URLs (https://192.168.1.2/admin) ebenso wie mit reinen Host-/IP-Angaben
    ohne Schema (192.168.1.2). */
+/* Wandelt die Links eines Elements in ein einheitliches Format
+   { label, url } um. Unterstuetzt sowohl das alte Format (Array aus
+   reinen URL-Strings) als auch das neue Format, damit bestehende
+   config.json-Dateien weiterhin funktionieren. */
+function normalizeLinks(links) {
+  if (!Array.isArray(links)) return [];
+  return links
+    .map((l) => {
+      if (typeof l === "string") return { label: "", url: l.trim() };
+      if (l && typeof l === "object") return { label: (l.label || "").trim(), url: (l.url || "").trim() };
+      return null;
+    })
+    .filter((l) => l && l.url);
+}
+
 function getElementHost(el) {
-  const link = (el.links || []).find(Boolean);
-  if (!link) return "";
+  const first = normalizeLinks(el.links)[0];
+  if (!first) return "";
   try {
-    return new URL(link).hostname;
+    return new URL(first.url).hostname;
   } catch (e) {
-    const m = link.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/([^/:?#]+)/) || link.match(/^([^/:?#\s]+)/);
+    const m = first.url.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/([^/:?#]+)/) || first.url.match(/^([^/:?#\s]+)/);
     return m ? m[1] : "";
   }
 }
@@ -862,6 +888,58 @@ $("#fPorts").addEventListener("input", () => {
   renderPortNameInputs();
 });
 
+/* ------------------------------------------------------------------ */
+/* Link-Editor im Element-Dialog: Bezeichnung + URL je Zeile           */
+/* ------------------------------------------------------------------ */
+
+let pendingLinks = []; // [{label, url}, ...]
+
+function renderLinksEditor() {
+  const list = $("#fLinksList");
+  list.innerHTML = "";
+  pendingLinks.forEach((link, i) => {
+    const row = document.createElement("div");
+    row.className = "link-edit-row";
+
+    const labelInput = document.createElement("input");
+    labelInput.type = "text";
+    labelInput.className = "link-edit-label";
+    labelInput.maxLength = 40;
+    labelInput.placeholder = "Bezeichnung (z. B. Admin, Grafana)";
+    labelInput.value = link.label || "";
+    labelInput.addEventListener("input", () => { pendingLinks[i].label = labelInput.value; });
+
+    const urlInput = document.createElement("input");
+    urlInput.type = "text";
+    urlInput.className = "link-edit-url";
+    urlInput.placeholder = "https://192.168.1.2/admin";
+    urlInput.value = link.url || "";
+    urlInput.addEventListener("input", () => { pendingLinks[i].url = urlInput.value; });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "link-edit-remove";
+    removeBtn.title = "Diese Webseite entfernen";
+    removeBtn.textContent = "✕";
+    removeBtn.addEventListener("click", () => {
+      pendingLinks.splice(i, 1);
+      renderLinksEditor();
+    });
+
+    row.appendChild(labelInput);
+    row.appendChild(urlInput);
+    row.appendChild(removeBtn);
+    list.appendChild(row);
+  });
+}
+
+$("#fAddLink").addEventListener("click", () => {
+  pendingLinks.push({ label: "", url: "" });
+  renderLinksEditor();
+  const rows = $("#fLinksList").querySelectorAll(".link-edit-url");
+  if (rows.length) rows[rows.length - 1].focus();
+});
+
 function openElementModal(id) {
   editingElementId = id;
   const el = config.elements.find((x) => x.id === id);
@@ -870,7 +948,8 @@ function openElementModal(id) {
   $("#fName").value = el.name || "";
   $("#fLocation").value = el.location || "";
   $("#fType").value = el.type;
-  $("#fLinks").value = (el.links || []).join("\n");
+  pendingLinks = normalizeLinks(el.links);
+  renderLinksEditor();
   $("#fPorts").value = hasPorts(el.type) ? getPortCount(el) : "";
   pendingPortNames = hasPorts(el.type)
     ? Array.from({ length: getPortCount(el) }, (_, i) => (el.port_names && el.port_names[i]) || "")
@@ -890,7 +969,9 @@ $("#fSave").addEventListener("click", () => {
   el.name = $("#fName").value.trim() || "(ohne Namen)";
   el.location = $("#fLocation").value.trim();
   el.type = $("#fType").value;
-  el.links = $("#fLinks").value.split("\n").map((s) => s.trim()).filter(Boolean);
+  el.links = pendingLinks
+    .map((l) => ({ label: (l.label || "").trim(), url: (l.url || "").trim() }))
+    .filter((l) => l.url);
 
   if (hasPorts(el.type)) {
     let n = parseInt($("#fPorts").value, 10);
@@ -929,43 +1010,6 @@ $("#fDelete").addEventListener("click", () => {
   $("#elementModal").classList.add("hidden");
   renderAll();
   persistConfig();
-});
-
-/* ------------------------------------------------------------------ */
-/* Links oeffnen (Nutzungs- und Bearbeitungsmodus)                     */
-/* ------------------------------------------------------------------ */
-
-function openLinks(el) {
-  const links = (el.links || []).filter(Boolean);
-  if (links.length === 0) return;
-  if (links.length === 1) {
-    window.open(links[0], "_blank", "noopener");
-    return;
-  }
-  editingElementId = el.id;
-  $("#linksModalTitle").textContent = el.name + " – Webseiten";
-  const list = $("#linksList");
-  list.innerHTML = "";
-  links.forEach((url) => {
-    const row = document.createElement("div");
-    row.className = "link-item";
-    row.innerHTML = `<span title="${escapeHtml(url)}">${escapeHtml(url)}</span>`;
-    const btn = document.createElement("button");
-    btn.className = "btn btn-primary";
-    btn.textContent = "Oeffnen";
-    btn.addEventListener("click", () => window.open(url, "_blank", "noopener"));
-    row.appendChild(btn);
-    list.appendChild(row);
-  });
-  $("#linksModal").classList.remove("hidden");
-}
-
-$("#lCancel").addEventListener("click", () => $("#linksModal").classList.add("hidden"));
-$("#lOpenAll").addEventListener("click", () => {
-  const el = config.elements.find((x) => x.id === editingElementId);
-  if (!el) return;
-  (el.links || []).filter(Boolean).forEach((url) => window.open(url, "_blank", "noopener"));
-  $("#linksModal").classList.add("hidden");
 });
 
 /* ------------------------------------------------------------------ */
@@ -1612,7 +1656,6 @@ function bindGlobalEvents() {
     if (e.key === "Escape") {
       $("#elementModal").classList.add("hidden");
       $("#connModal").classList.add("hidden");
-      $("#linksModal").classList.add("hidden");
       if (connCtxMenuEl) closeConnContextMenu();
       closePortNameEditor();
       if (marqueeState) {
