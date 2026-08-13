@@ -2,7 +2,7 @@
 
 # Netzwerkplan
 
-**Aktuelle Version: 1.10.2** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.10.3** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -208,7 +208,10 @@ solange gültiges JSON erhalten bleibt.
   hinzufügen"). Jede erscheint als eigene, benannte Schaltfläche direkt
   auf dem Element (z. B. „↗ Admin-Oberfläche", „↗ Grafana"). Über die
   Protokoll-Schnellauswahl lassen sich auch Schaltflächen für RDP, VNC
-  oder SSH anlegen (z. B. „rdp://192.168.1.10" für Remotedesktop).
+  oder SSH anlegen (z. B. „rdp://192.168.1.10" für Remotedesktop). Ein
+  Klick auf eine RDP-Schaltfläche lädt eine `.rdp`-Datei mit der
+  passenden Ziel-IP herunter; deren Öffnen startet die Windows-
+  Remotedesktopverbindung automatisch mit vorausgefüllter Adresse.
 - **Nutzungsmodus**: Keine Änderungen möglich, es können ausschließlich
   über die Webseiten-Schaltflächen auf jedem Element die hinterlegten
   Seiten geöffnet werden. Ein Klick auf eine Leitung hebt sie vollständig

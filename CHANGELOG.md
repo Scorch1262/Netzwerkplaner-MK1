@@ -2,6 +2,29 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.10.3] – RDP-Schaltflächen funktionieren jetzt unter Windows
+
+- **Ursache:** Windows registriert das Protokoll `rdp://` standardmäßig
+  **nicht** als eigenständigen URI-Handler (anders als z. B. `mailto:`).
+  Ein einfacher Link-Klick auf `rdp://192.168.1.10` führte deshalb zu
+  nichts – der Button hat effektiv nichts geöffnet.
+- **Lösung:** Ein Klick auf eine RDP-Schaltfläche erzeugt jetzt eine
+  echte **`.rdp`-Datei** (Format der Windows-Remotedesktopverbindung) mit
+  der hinterlegten Ziel-IP (inkl. optionalem Port, z. B.
+  `rdp://192.168.1.10:3390`) und lädt sie herunter. Öffnet man die
+  heruntergeladene Datei, startet Windows automatisch die
+  Remotedesktopverbindung (`mstsc`) mit bereits eingetragener Zieladresse
+  – der letzte Klick auf die heruntergeladene Datei lässt sich technisch
+  nicht vermeiden, da Browser aus Sicherheitsgründen keine Dateien
+  selbstständig ausführen dürfen.
+- Der Button-Tooltip weist jetzt bei RDP-Links darauf hin, dass eine
+  Datei heruntergeladen wird.
+- VNC- und SSH-Links (`vnc://`, `ssh://`) funktionieren unverändert über
+  einen direkten Link-Klick, sofern ein passender Client mit
+  Protokoll-Registrierung installiert ist (z. B. RealVNC, MobaXterm).
+- Keine Änderung am Datenformat – bestehende RDP-Links in `config.json`
+  funktionieren automatisch mit der neuen Öffnungslogik.
+
 ## [1.10.2] – GitHub Actions baut jetzt auch eine ausführbare Datei für macOS
 
 - **Kein Code der Anwendung geändert** – reine Build-/CI-Änderung.

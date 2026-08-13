@@ -518,7 +518,9 @@ function buildElementNode(el) {
       const btn = document.createElement("button");
       btn.className = "el-link-btn";
       btn.textContent = getLinkIcon(link.url) + " " + (link.label || "Webseite " + (i + 1));
-      btn.title = link.url;
+      btn.title = getLinkScheme(link.url) === "rdp"
+        ? link.url + " – laedt eine .rdp-Datei herunter (Windows-Remotedesktopverbindung)"
+        : link.url;
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         openLink(link.url);
@@ -747,17 +749,29 @@ function getLinkIcon(url) {
   return "↗";
 }
 
-/* Oeffnet eine hinterlegte Adresse. http(s) oeffnet einen neuen Tab.
-   Andere Protokolle (rdp://, vnc://, ssh://, ...) werden ueber einen
-   unsichtbaren Link-Klick ausgeloest, da window.open() dafuer in manchen
-   Browsern nicht zuverlaessig funktioniert bzw. vom Popup-Blocker
-   verhindert wird. So laesst sich z. B. eine Schaltflaeche anlegen, die
-   eine RDP-Verbindung (z. B. "rdp://192.168.1.10") direkt oeffnet, sofern
-   im Betriebssystem/Browser ein passender Handler registriert ist. */
+/* Oeffnet eine hinterlegte Adresse.
+   - http(s): oeffnet einen neuen Tab.
+   - rdp: Windows registriert "rdp://" standardmaessig NICHT als
+     Protokoll, ein einfacher Link-Klick fuehrt dort also zu nichts.
+     Stattdessen wird eine echte .rdp-Datei (Remotedesktopverbindung)
+     erzeugt und heruntergeladen. Diese Datei enthaelt bereits die
+     Ziel-IP; ein Doppelklick auf die heruntergeladene Datei oeffnet
+     automatisch die Windows-Remotedesktopverbindung (mstsc) mit
+     vorausgefuellter Zieladresse – ein zusaetzlicher Klick des Nutzers
+     ist dabei unumgaenglich, da Browser aus Sicherheitsgruenden keine
+     heruntergeladenen Dateien selbststaendig ausfuehren duerfen.
+   - andere Protokolle (vnc://, ssh://, ...): werden ueber einen
+     unsichtbaren Link-Klick ausgeloest, sofern im Betriebssystem/Browser
+     ein passender Handler dafuer registriert ist (z. B. durch einen
+     installierten VNC-/SSH-Client). */
 function openLink(url) {
   const scheme = getLinkScheme(url);
   if (scheme === "http" || scheme === "https" || scheme === "") {
     window.open(url, "_blank", "noopener");
+    return;
+  }
+  if (scheme === "rdp") {
+    downloadRdpFile(url);
     return;
   }
   try {
@@ -771,6 +785,38 @@ function openLink(url) {
   } catch (e) {
     window.open(url, "_blank", "noopener");
   }
+}
+
+/* Erzeugt aus einer rdp://-Adresse eine echte .rdp-Datei (Format der
+   Windows-Remotedesktopverbindung) und stoesst deren Download an. Die
+   Zieladresse (inkl. optionalem Port, z. B. rdp://192.168.1.10:3390)
+   wird dabei direkt in die Datei uebernommen. */
+function downloadRdpFile(url) {
+  let target = (url || "").replace(/^rdp:\/\//i, "").replace(/\/+$/, "");
+  if (!target) target = url;
+  const rdpContent =
+    "full address:s:" + target + "\r\n" +
+    "prompt for credentials:i:1\r\n" +
+    "authentication level:i:2\r\n" +
+    "screen mode id:i:2\r\n";
+
+  const blob = new Blob([rdpContent], { type: "application/x-rdp" });
+  const blobUrl = URL.createObjectURL(blob);
+  const fileNameBase = (target.split(":")[0] || "verbindung").replace(/[^a-zA-Z0-9._-]/g, "_");
+
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = fileNameBase + ".rdp";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 4000);
+
+  setStatus(
+    "RDP-Datei fuer " + target + " heruntergeladen – zum Verbinden die " +
+    "heruntergeladene .rdp-Datei oeffnen."
+  );
 }
 
 function getElementHost(el) {
