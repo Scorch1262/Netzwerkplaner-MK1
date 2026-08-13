@@ -2,6 +2,23 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.10.2] – GitHub Actions baut jetzt auch eine ausführbare Datei für macOS
+
+- **Kein Code der Anwendung geändert** – reine Build-/CI-Änderung.
+- `.github/workflows/build-exe.yml` baut jetzt per Matrix-Strategie
+  **parallel** eine Windows-`.exe` (auf `windows-latest`) und eine
+  ausführbare Datei für macOS (auf `macos-latest`), jeweils mit korrektem
+  Trennzeichen für `--add-data` (`;` unter Windows, `:` unter macOS).
+- Beide Builds werden als eigene Artefakte hochgeladen
+  (**Netzwerkplan-Windows** / **Netzwerkplan-macOS**).
+- Bei einem Tag-Push (`v*`) wartet ein separater Release-Job auf beide
+  Builds und hängt **beide** ausführbaren Dateien plus `config.json` und
+  `README.md` an ein gemeinsames GitHub Release an (Dateien eindeutig
+  benannt: `Netzwerkplan-Windows.exe` / `Netzwerkplan-macOS`, um
+  Namenskonflikte beim gleichzeitigen Hochladen zu vermeiden).
+- README um einen Hinweis zur macOS-Nutzung ergänzt (Gatekeeper /
+  Quarantäne-Flag entfernen, da die Datei unsigniert ist).
+
 ## [1.10.1] – Kritischer Bugfix: Verbindungen verschwanden beim Laden bestehender Configs
 
 - **Ursache gefunden und behoben:** Die in v1.10.0 eingeführte

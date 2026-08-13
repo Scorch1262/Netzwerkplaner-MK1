@@ -2,7 +2,7 @@
 
 # Netzwerkplan
 
-**Aktuelle Version: 1.10.1** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.10.2** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -64,8 +64,10 @@ netzwerkplan/
 ## 4. Automatischer Build per GitHub Actions (empfohlen)
 
 Dieses Repository enthält bereits den Workflow
-`.github/workflows/build-exe.yml`. Er baut die `.exe` automatisch auf
-GitHubs Windows-Runnern – es muss also kein Windows-Rechner lokal
+`.github/workflows/build-exe.yml`. Er baut automatisch **sowohl eine
+Windows-`.exe`** (auf einem Windows-Runner) **als auch eine ausführbare
+Datei für macOS** (auf einem macOS-Runner) – parallel, in einem einzigen
+Workflow-Lauf. Es muss also weder ein Windows- noch ein Mac-Rechner lokal
 vorhanden sein.
 
 **Vorgehen:**
@@ -81,22 +83,41 @@ vorhanden sein.
    git push -u origin main
    ```
 2. Der Workflow startet automatisch beim Push auf `main` (auch manuell
-   auslösbar über den Reiter **Actions → Build Windows EXE → Run
-   workflow**).
-3. Nach ca. 1–2 Minuten ist der Build unter **Actions → [letzter Lauf] →
-   Artifacts → Netzwerkplan-Windows** als ZIP herunterladbar. Es enthält
-   `Netzwerkplan.exe`, `config.json` und `README.md`.
-4. Für ein richtiges GitHub **Release** (dauerhafter Download-Link)
-   zusätzlich einen Tag pushen, z. B.:
+   auslösbar über den Reiter **Actions → Build Windows EXE + macOS App →
+   Run workflow**).
+3. Nach ca. 2–4 Minuten sind die Builds unter **Actions → [letzter Lauf] →
+   Artifacts** als ZIP herunterladbar:
+   - **Netzwerkplan-Windows** – enthält `Netzwerkplan.exe`, `config.json`
+     und `README.md`.
+   - **Netzwerkplan-macOS** – enthält die ausführbare Datei
+     `Netzwerkplan` (ohne Dateiendung), `config.json` und `README.md`.
+4. Für ein richtiges GitHub **Release** (dauerhafte Download-Links für
+   beide Plattformen) zusätzlich einen Tag pushen, z. B.:
    ```bash
    git tag v1.0.0
    git push origin v1.0.0
    ```
-   Der Workflow erstellt dann automatisch ein Release mit der exe als
-   Anhang.
+   Der Workflow wartet dann, bis **beide** Builds fertig sind, und
+   erstellt automatisch ein Release mit `Netzwerkplan-Windows.exe`,
+   `Netzwerkplan-macOS`, `config.json` und `README.md` als Anhang.
 
 Der Workflow benötigt keine zusätzlichen GitHub Secrets – `GITHUB_TOKEN`
 wird von GitHub Actions automatisch bereitgestellt.
+
+### Hinweis zur Nutzung der macOS-Datei
+
+Macs blockieren unsignierte, aus dem Internet heruntergeladene Programme
+standardmäßig (Gatekeeper). Nach dem Download der Datei `Netzwerkplan`:
+
+```bash
+chmod +x Netzwerkplan
+xattr -d com.apple.quarantine Netzwerkplan   # Download-Sperre entfernen
+./Netzwerkplan
+```
+
+Alternativ: Rechtsklick auf die Datei im Finder → **Öffnen** → im
+Warnhinweis erneut **Öffnen** bestätigen. Die `config.json` muss dabei im
+selben Ordner wie die Datei `Netzwerkplan` liegen.
 
 ## 4b. Alternative: manueller Build mit PyInstaller
 
