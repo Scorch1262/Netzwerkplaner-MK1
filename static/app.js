@@ -1450,7 +1450,7 @@ function buildSmoothPath(points, dir1, dir2) {
       cpB = { x: p1.x + dir2.x * len, y: p1.y + dir2.y * len };
     } else {
       const prevOfNext = points[i];
-      const nextOfNext = points[i + 2];
+      const nextOfNext = points[i + 2] !== undefined ? points[i + 2] : p1;
       const t = normalize({ x: nextOfNext.x - prevOfNext.x, y: nextOfNext.y - prevOfNext.y });
       cpB = { x: p1.x - t.x * (len / 2.2), y: p1.y - t.y * (len / 2.2) };
     }

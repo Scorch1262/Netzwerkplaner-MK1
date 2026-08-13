@@ -2,6 +2,29 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.10.1] – Kritischer Bugfix: Verbindungen verschwanden beim Laden bestehender Configs
+
+- **Ursache gefunden und behoben:** Die in v1.10.0 eingeführte
+  `buildSmoothPath()`-Funktion griff bei der letzten Kurven-Teilstrecke
+  auf einen nicht existierenden Punkt zu (`points[i + 2]`), sobald eine
+  Verbindung **keine Wegpunkte** hatte **und** ihre Zielseite **kein
+  spezifischer Port** war – also bei praktisch jeder „normalen"
+  Verbindung zu einem Server, PC, Laptop, einer Kamera usw. ohne Ports.
+  Das führte zu einem Skriptfehler mitten in der Render-Schleife, wodurch
+  diese Verbindung **und alle danach verarbeiteten Verbindungen** nicht
+  mehr gezeichnet wurden – obwohl sie in der `config.json` weiterhin
+  vollständig vorhanden waren (kein Datenverlust, nur ein
+  Darstellungsfehler).
+- Betroffen waren Konfigurationen aus **allen** älteren Versionen (nicht
+  nur v1.9.0), sobald sie mindestens eine Verbindung ohne Wegpunkte zu
+  einem portlosen Element enthielten.
+- Der Fehler wurde mit einer echten Browser-Umgebungssimulation (jsdom)
+  reproduziert und verifiziert behoben: Testkonfigurationen mit
+  gemischten Verbindungstypen (mit/ohne Ports, mit/ohne Wegpunkte, altes
+  und neues Link-Format) rendern jetzt alle Verbindungen vollständig.
+- Keine Änderung am Datenformat – betroffene `config.json`-Dateien müssen
+  nicht angepasst werden, es reicht das aktualisierte Programm.
+
 ## [1.10.0] – Hervorhebung im Nutzermodus, RDP-Schaltflächen, weiche Kurven, diverse Verbesserungen
 
 **Wichtig: Abwärtskompatibilität.** Alle Änderungen dieser Version wurden
