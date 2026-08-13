@@ -36,6 +36,20 @@ const PORT_DOT = 14, PORT_GAP = 5;
 
 /* Reihenfolge beim Rotieren (Uhrzeigersinn): unten -> links -> oben -> rechts */
 const PORT_SIDES = ["bottom", "left", "top", "right"];
+const OPPOSITE_SIDE = { bottom: "top", top: "bottom", left: "right", right: "left" };
+
+/* Elementtypen, bei denen die Ports auf zwei gegenueberliegenden Seiten mit
+   paralleler Nummerierung/Benennung erscheinen (z. B. Vorder-/Rueckseite
+   eines Patchfelds: Port 1 vorne = Port 1 hinten, gleicher Name). */
+function hasDualSides(type) {
+  return type === "patchpanel";
+}
+function sideAxis(side) {
+  return side === "left" || side === "right" ? "horizontal" : "vertical";
+}
+function sideSlot(side) {
+  return side === "top" || side === "left" ? "start" : "end";
+}
 
 function hasPorts(type) {
   return Object.prototype.hasOwnProperty.call(DEFAULT_PORTS, type);
@@ -411,6 +425,49 @@ function renderElements() {
   computePortRelOffsets();
 }
 
+/* Erzeugt eine Portreihe (ports-bar) fuer eine Seite des Elements.
+   sideKey ist "a" (primaere/konfigurierte Seite) oder "b" (bei Patchfeldern
+   die gegenueberliegende Seite mit paralleler Nummerierung/Benennung).
+   Beide Seiten teilen sich el.port_names, daher ist eine Umbenennung auf
+   der einen Seite automatisch auch auf der anderen sichtbar. */
+function buildPortsBar(el, side, sideKey, axis, mirrored, portCount) {
+  const bar = document.createElement("div");
+  bar.className = "ports-bar " + (axis === "vertical" ? "bar-row" : "bar-col") +
+    " slot-" + sideSlot(side) + (mirrored ? " mirrored-bar" : "");
+  bar.dataset.side = sideKey;
+
+  for (let i = 0; i < portCount; i++) {
+    const dot = document.createElement("div");
+    dot.className = "port-dot";
+    dot.dataset.port = String(i);
+    dot.dataset.side = sideKey;
+    const customName = getPortName(el, i);
+    const sideHint = sideKey === "b" ? " (" + sideLabel(side) + ")" : "";
+    dot.title = customName
+      ? `${customName} (Port ${i + 1}${sideHint})`
+      : "Port " + (i + 1) + sideHint + " – Doppelklick: Namen vergeben";
+    dot.textContent = customName ? (i + 1) + " " + customName : String(i + 1);
+    if (customName) dot.classList.add("port-named");
+    dot.addEventListener("mousedown", (e) => e.stopPropagation());
+    dot.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (mode === "edit" && connectMode) {
+        handleConnectPick(el.id, i, sideKey);
+      }
+    });
+    if (mode === "edit") {
+      dot.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (connectMode) return;
+        openPortNameEditor(el, i, e.clientX, e.clientY);
+      });
+    }
+    bar.appendChild(dot);
+  }
+  return bar;
+}
+
 function buildElementNode(el) {
   const def = ELEMENT_TYPES[el.type] || ELEMENT_TYPES.generic;
   const node = document.createElement("div");
@@ -424,10 +481,12 @@ function buildElementNode(el) {
   const portCount = getPortCount(el);
   const side = getPortSide(el);
   const mirrored = getPortMirror(el);
+  const dual = portCount > 0 && hasDualSides(el.type);
+  const axis = sideAxis(side);
   const hostDisplay = getElementHost(el);
 
   if (portCount > 0) {
-    node.classList.add("has-ports", "side-" + side);
+    node.classList.add("has-ports", "axis-" + axis);
     if (mirrored) node.classList.add("mirrored");
   }
 
@@ -482,7 +541,9 @@ function buildElementNode(el) {
       const rotateBtn = document.createElement("div");
       rotateBtn.className = "el-ctrl-btn";
       rotateBtn.textContent = "⟳";
-      rotateBtn.title = "Ports auf naechste Seite drehen (aktuell: " + sideLabel(side) + ")";
+      rotateBtn.title = dual
+        ? "Ports auf naechstes Seitenpaar drehen (aktuell: " + sideLabel(side) + " + " + sideLabel(OPPOSITE_SIDE[side]) + ")"
+        : "Ports auf naechste Seite drehen (aktuell: " + sideLabel(side) + ")";
       rotateBtn.addEventListener("mousedown", (e) => e.stopPropagation());
       rotateBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -514,35 +575,14 @@ function buildElementNode(el) {
 
   if (portCount > 0) {
     /* Elemente mit Ports: Verbindungen duerfen nur an einem konkreten
-       Port-Andockpunkt gestartet/beendet werden, nicht am Element selbst. */
-    const portsBar = document.createElement("div");
-    portsBar.className = "ports-bar";
-    for (let i = 0; i < portCount; i++) {
-      const dot = document.createElement("div");
-      dot.className = "port-dot";
-      dot.dataset.port = String(i);
-      const customName = getPortName(el, i);
-      dot.title = customName ? `${customName} (Port ${i + 1})` : "Port " + (i + 1) + " – Doppelklick: Namen vergeben";
-      dot.textContent = customName ? (i + 1) + " " + customName : String(i + 1);
-      if (customName) dot.classList.add("port-named");
-      dot.addEventListener("mousedown", (e) => e.stopPropagation());
-      dot.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (mode === "edit" && connectMode) {
-          handleConnectPick(el.id, i);
-        }
-      });
-      if (mode === "edit") {
-        dot.addEventListener("dblclick", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (connectMode) return;
-          openPortNameEditor(el, i, e.clientX, e.clientY);
-        });
-      }
-      portsBar.appendChild(dot);
+       Port-Andockpunkt gestartet/beendet werden, nicht am Element selbst.
+       Bei Patchfeldern (hasDualSides) gibt es zusaetzlich eine zweite,
+       identisch nummerierte/benannte Portreihe auf der gegenueberliegenden
+       Seite (z. B. Vorder-/Rueckseite). */
+    node.appendChild(buildPortsBar(el, side, "a", axis, mirrored, portCount));
+    if (dual) {
+      node.appendChild(buildPortsBar(el, OPPOSITE_SIDE[side], "b", axis, mirrored, portCount));
     }
-    node.appendChild(portsBar);
   } else {
     node.addEventListener("click", (e) => {
       if (e.target.closest(".el-link-btn") || e.target.closest(".el-ctrl-btn")) return;
@@ -648,13 +688,15 @@ function mirrorPorts(id) {
 function computePortRelOffsets() {
   portRelOffsets = {};
   elementLayer.querySelectorAll(".net-element").forEach((node) => {
-    const dots = node.querySelectorAll(".port-dot");
-    if (dots.length === 0) return;
+    const dotsA = node.querySelectorAll('.port-dot[data-side="a"]');
+    const dotsB = node.querySelectorAll('.port-dot[data-side="b"]');
+    if (dotsA.length === 0 && dotsB.length === 0) return;
     const id = node.dataset.id;
-    portRelOffsets[id] = Array.from(dots).map((dot) => ({
+    const toOffsets = (dots) => Array.from(dots).map((dot) => ({
       x: dot.offsetLeft + dot.offsetWidth / 2,
       y: dot.offsetTop + dot.offsetHeight / 2,
     }));
+    portRelOffsets[id] = { a: toOffsets(dotsA), b: toOffsets(dotsB) };
   });
 }
 
@@ -1031,11 +1073,12 @@ $("#btnConnectMode").addEventListener("click", () => {
     : "Bereit");
 });
 
-function portPickNode(id, port) {
+function portPickNode(id, port, side) {
   const node = elementLayer.querySelector(`.net-element[data-id="${id}"]`);
   if (!node) return null;
   if (port === null || port === undefined) return node;
-  return node.querySelector(`.port-dot[data-port="${port}"]`);
+  const sideKey = side === "b" ? "b" : "a";
+  return node.querySelector(`.port-dot[data-port="${port}"][data-side="${sideKey}"]`);
 }
 
 function clearConnectPickHighlight() {
@@ -1043,19 +1086,20 @@ function clearConnectPickHighlight() {
   $$(".port-dot.port-picked").forEach((n) => n.classList.remove("port-picked"));
 }
 
-function handleConnectPick(id, port) {
-  const targetNode = portPickNode(id, port);
+function handleConnectPick(id, port, side) {
+  const sideKey = side === "b" ? "b" : "a";
+  const targetNode = portPickNode(id, port, sideKey);
   if (!targetNode) return;
 
   if (!connectFrom) {
-    connectFrom = { id, port: port ?? null };
+    connectFrom = { id, port: port ?? null, side: sideKey };
     targetNode.classList.add(port === null || port === undefined ? "connect-pick" : "port-picked");
     setStatus("Zweiten Anschluss / zweites Element fuer die Verbindung anklicken.");
     return;
   }
 
   // Erneuter Klick auf denselben Startpunkt -> Auswahl aufheben
-  if (connectFrom.id === id && (connectFrom.port ?? null) === (port ?? null)) {
+  if (connectFrom.id === id && (connectFrom.port ?? null) === (port ?? null) && connectFrom.side === sideKey) {
     clearConnectPickHighlight();
     connectFrom = null;
     return;
@@ -1066,7 +1110,9 @@ function handleConnectPick(id, port) {
     from: connectFrom.id,
     to: id,
     from_port: connectFrom.port ?? null,
+    from_port_side: connectFrom.side || "a",
     to_port: port ?? null,
+    to_port_side: sideKey,
     color: selectedColor,
     thickness: 4,
     label: "",
@@ -1089,10 +1135,10 @@ function renderConnections() {
     if (!fromEl || !toEl) continue;
     if (!Array.isArray(conn.waypoints)) conn.waypoints = [];
 
-    const p1 = connectionEndpoint(fromEl, conn.from_port);
-    const p2 = connectionEndpoint(toEl, conn.to_port);
-    const dir1 = connectionDirection(fromEl, conn.from_port);
-    const dir2 = connectionDirection(toEl, conn.to_port);
+    const p1 = connectionEndpoint(fromEl, conn.from_port, conn.from_port_side);
+    const p2 = connectionEndpoint(toEl, conn.to_port, conn.to_port_side);
+    const dir1 = connectionDirection(fromEl, conn.from_port, conn.from_port_side);
+    const dir2 = connectionDirection(toEl, conn.to_port, conn.to_port_side);
 
     const path = conn.waypoints.length > 0
       ? roundedPath([p1, ...conn.waypoints, p2], 20)
@@ -1246,10 +1292,11 @@ function renderConnections() {
    Leitungen nicht quer durch das Element oder andere Elemente laufen und
    sich weniger leicht "verknoten". Ohne konkreten Port: keine feste
    Richtung (automatische Heuristik in buildAutoPath). */
-function connectionDirection(el, portIndex) {
+function connectionDirection(el, portIndex, portSide) {
   if (portIndex === null || portIndex === undefined) return null;
   if (!hasPorts(el.type)) return null;
-  const side = getPortSide(el);
+  const primarySide = getPortSide(el);
+  const side = portSide === "b" ? OPPOSITE_SIDE[primarySide] : primarySide;
   return { bottom: { x: 0, y: 1 }, top: { x: 0, y: -1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } }[side];
 }
 
@@ -1343,8 +1390,8 @@ function currentConnPoints(conn) {
   const fromEl = config.elements.find((x) => x.id === conn.from);
   const toEl = config.elements.find((x) => x.id === conn.to);
   if (!fromEl || !toEl) return [];
-  const p1 = connectionEndpoint(fromEl, conn.from_port);
-  const p2 = connectionEndpoint(toEl, conn.to_port);
+  const p1 = connectionEndpoint(fromEl, conn.from_port, conn.from_port_side);
+  const p2 = connectionEndpoint(toEl, conn.to_port, conn.to_port_side);
   return [p1, ...(conn.waypoints || []), p2];
 }
 
@@ -1512,17 +1559,18 @@ function markPortColors() {
   for (const conn of config.connections) {
     const color = conn.color || "#3ad6ff";
     if (conn.from_port !== null && conn.from_port !== undefined) {
-      applyPortColor(conn.from, conn.from_port, color);
+      applyPortColor(conn.from, conn.from_port, conn.from_port_side, color);
     }
     if (conn.to_port !== null && conn.to_port !== undefined) {
-      applyPortColor(conn.to, conn.to_port, color);
+      applyPortColor(conn.to, conn.to_port, conn.to_port_side, color);
     }
   }
 }
 
-function applyPortColor(elId, portIndex, color) {
+function applyPortColor(elId, portIndex, portSide, color) {
+  const sideKey = portSide === "b" ? "b" : "a";
   const dot = elementLayer.querySelector(
-    `.net-element[data-id="${elId}"] .port-dot[data-port="${portIndex}"]`
+    `.net-element[data-id="${elId}"] .port-dot[data-port="${portIndex}"][data-side="${sideKey}"]`
   );
   if (!dot) return;
   dot.classList.add("port-connected");
@@ -1538,10 +1586,11 @@ function elementCenter(el) {
 
 /* Liefert den Andockpunkt einer Verbindung: bei Switch/Router/Patchfeld den
    konkreten Port (falls vorhanden), sonst den Element-Mittelpunkt. */
-function connectionEndpoint(el, portIndex) {
+function connectionEndpoint(el, portIndex, portSide) {
   const rel = portRelOffsets[el.id];
-  if (portIndex !== null && portIndex !== undefined && rel && rel[portIndex]) {
-    return { x: el.x + rel[portIndex].x, y: el.y + rel[portIndex].y };
+  const key = portSide === "b" ? "b" : "a";
+  if (portIndex !== null && portIndex !== undefined && rel && rel[key] && rel[key][portIndex]) {
+    return { x: el.x + rel[key][portIndex].x, y: el.y + rel[key][portIndex].y };
   }
   return elementCenter(el);
 }

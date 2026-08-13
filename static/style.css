@@ -256,11 +256,13 @@ body.use-mode .divider.edit-divider {
 .edit-mode .net-element { cursor: grab; }
 .edit-mode .net-element.dragging { cursor: grabbing; opacity: 0.85; z-index: 50; }
 
-/* Grundausrichtung: Ports unten (Standard) */
+/* Grundausrichtung ueber die Achse: vertikale Achse (Ports oben/unten) =
+   Spalte, horizontale Achse (Ports links/rechts) = Zeile. Die genaue
+   Platzierung der/des Portriegel(s) erfolgt ueber .slot-start/.slot-end
+   (CSS order), das el-body bleibt dabei immer in der Mitte (order 0). */
 .net-element { flex-direction: column; }
-.net-element.side-top { flex-direction: column-reverse; }
-.net-element.side-right { flex-direction: row; }
-.net-element.side-left { flex-direction: row-reverse; }
+.net-element.axis-horizontal { flex-direction: row; }
+.el-body { order: 0; }
 
 .el-body {
   width: 148px;
@@ -376,31 +378,27 @@ body.use-mode .divider.edit-divider {
   flex-shrink: 0;
   overflow: visible;
 }
-/* Ports oben/unten: horizontale Reihe */
-.net-element.side-bottom .ports-bar,
-.net-element.side-top .ports-bar {
-  flex-direction: row;
-}
-.net-element.side-bottom .ports-bar { border-top: 1px dashed var(--border-soft); }
-.net-element.side-top .ports-bar { border-bottom: 1px dashed var(--border-soft); }
 
-/* Ports links/rechts: vertikale Reihe (eine Spalte) */
-.net-element.side-left .ports-bar,
-.net-element.side-right .ports-bar {
-  flex-direction: column;
-}
-.net-element.side-right .ports-bar { border-left: 1px dashed var(--border-soft); }
-.net-element.side-left .ports-bar { border-right: 1px dashed var(--border-soft); }
+/* Platzierung relativ zum el-body (order 0): "start" vor, "end" nach dem
+   Body – unabhaengig von der DOM-Reihenfolge, damit ein Patchfeld beide
+   Riegel (Seite A + gegenueberliegende Seite B) gleichzeitig anzeigen kann. */
+.ports-bar.slot-start { order: -1; }
+.ports-bar.slot-end { order: 1; }
 
-/* Spiegeln: Reihenfolge der Ports innerhalb der Reihe umkehren */
-.net-element.mirrored.side-bottom .ports-bar,
-.net-element.mirrored.side-top .ports-bar {
-  flex-direction: row-reverse;
-}
-.net-element.mirrored.side-left .ports-bar,
-.net-element.mirrored.side-right .ports-bar {
-  flex-direction: column-reverse;
-}
+/* Ports oben/unten (vertikale Achse): horizontale Reihe */
+.ports-bar.bar-row { flex-direction: row; }
+.ports-bar.bar-row.slot-end { border-top: 1px dashed var(--border-soft); }
+.ports-bar.bar-row.slot-start { border-bottom: 1px dashed var(--border-soft); }
+
+/* Ports links/rechts (horizontale Achse): vertikale Reihe (eine Spalte) */
+.ports-bar.bar-col { flex-direction: column; }
+.ports-bar.bar-col.slot-end { border-left: 1px dashed var(--border-soft); }
+.ports-bar.bar-col.slot-start { border-right: 1px dashed var(--border-soft); }
+
+/* Spiegeln: Reihenfolge der Ports innerhalb einer Reihe umkehren
+   (gilt fuer beide Riegel gleichermassen -> Nummerierung bleibt parallel) */
+.ports-bar.bar-row.mirrored-bar { flex-direction: row-reverse; }
+.ports-bar.bar-col.mirrored-bar { flex-direction: column-reverse; }
 
 .port-dot {
   min-width: 14px;

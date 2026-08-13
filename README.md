@@ -1,9 +1,8 @@
-
 ![Bild](Unbenannt.PNG)
 
 # Netzwerkplan
 
-**Aktuelle Version: 1.8.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.9.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -159,7 +158,10 @@ solange gültiges JSON erhalten bleibt.
   (Seite drehen) und „⇋" (Reihenfolge spiegeln) am Element ausrichten.
   Doppelklick auf einen einzelnen Port vergibt einen eigenen Portnamen
   (zusätzlich zur Nummer); alle Portnamen lassen sich auch gesammelt im
-  Element-Dialog bearbeiten.
+  Element-Dialog bearbeiten. Beim **Patchfeld** erscheinen die Ports
+  automatisch auf zwei gegenüberliegenden Seiten mit identischer
+  Nummerierung und identischen Namen (Vorder-/Rückseite); Verbindungen
+  lassen sich unabhängig an der einen oder anderen Seite andocken.
 - **Mehrere Elemente gemeinsam verschieben:** Im Bearbeitungsmodus bei
   gehaltener Umschalttaste (Shift) auf leerer Fläche ziehen, um einen
   Auswahlrahmen aufzuziehen. Alle berührten Elemente werden markiert

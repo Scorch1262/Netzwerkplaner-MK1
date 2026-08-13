@@ -59,6 +59,19 @@
           "url": "https://192.168.1.10:8443/admin"
         }
       ]
+    },
+    {
+      "id": "el-patchpanel-1",
+      "type": "patchpanel",
+      "name": "Patchfeld Rack 1",
+      "location": "Serverraum EG, Rack 1",
+      "x": 700,
+      "y": 550,
+      "ports": 24,
+      "port_side": "bottom",
+      "port_mirror": false,
+      "port_names": ["", "Buero 101", "Buero 102"],
+      "links": []
     }
   ],
   "connections": [
@@ -79,10 +92,26 @@
       "from": "el-switch-1",
       "to": "el-server-1",
       "from_port": 1,
+      "from_port_side": "a",
       "to_port": null,
+      "to_port_side": "a",
       "color": "#ff8a3d",
       "thickness": 4,
       "label": "1 GbE",
+      "label_at": null,
+      "waypoints": []
+    },
+    {
+      "id": "conn-3",
+      "from": "el-switch-1",
+      "to": "el-patchpanel-1",
+      "from_port": 2,
+      "from_port_side": "a",
+      "to_port": 1,
+      "to_port_side": "b",
+      "color": "#35d68f",
+      "thickness": 3,
+      "label": "Buero 101 (Rueckseite)",
       "label_at": null,
       "waypoints": []
     }

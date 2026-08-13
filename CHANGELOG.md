@@ -2,6 +2,33 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.9.0] – Patchfeld: Ports auf zwei gegenüberliegenden Seiten (parallel nummeriert/benannt)
+
+- **Neu:** Das Element „Patchfeld" zeigt seine Ports jetzt automatisch auf
+  **zwei gegenüberliegenden Seiten** gleichzeitig an (z. B. oben und unten,
+  oder links und rechts) – mit **identischer Nummerierung und identischen
+  Namen** auf beiden Seiten (Port 5 vorne = Port 5 hinten, gleicher Name).
+  Das bildet die typische Vorder-/Rückseite eines physischen Patchfelds ab.
+- Verbindungen lassen sich gezielt an der einen **oder** der anderen Seite
+  eines Patchfeld-Ports andocken (z. B. interne Verkabelung auf der
+  Rückseite, Patchkabel auf der Vorderseite) – beide Andockpunkte sind
+  unabhängig voneinander anklickbar.
+- Ein Portname wird nur **einmal** gepflegt (per Doppelklick auf einen der
+  beiden Punkte oder im Element-Dialog) und gilt automatisch für beide
+  Seiten – „parallele Benennung".
+- „⟳" (Seite drehen) und „⇋" (spiegeln) wirken weiterhin auf beide Seiten
+  gemeinsam, sodass die Nummerierung auf beiden Seiten stets exakt
+  parallel bleibt.
+- Andere Elementtypen mit Ports (Switch, Router) sind von dieser Änderung
+  nicht betroffen und zeigen ihre Ports weiterhin nur auf einer Seite.
+- Intern wurde die Portpositions-Logik von einer einzelnen Seite auf ein
+  Achsen-/Slot-Modell umgestellt (technische Grundlage für beliebige
+  zukünftige Mehrfach-Seiten-Elemente).
+- `config.json`: Verbindungen haben jetzt zusätzlich `from_port_side` /
+  `to_port_side` (`"a"` = primäre/konfigurierte Seite, `"b"` = die
+  gegenüberliegende Seite bei Patchfeldern). Fehlt das Feld, wird `"a"`
+  angenommen – bestehende Konfigurationen funktionieren unverändert weiter.
+
 ## [1.8.0] – Mehrere benennbare Webseiten-Schaltflächen je Element
 
 - **Neu:** Ein Element kann jetzt mehrere Webseiten hinterlegt bekommen,
