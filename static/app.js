@@ -84,6 +84,7 @@ let draggingEl = null, dragOffset = { x: 0, y: 0 };
 let dragGroup = null; // { ids, nodes, startPositions, startPointerCanvas } | null
 let selectedElementIds = new Set();
 let marqueeState = null; // { startX, startY, el } | null
+let highlightedConnId = null; // im Nutzermodus per Klick hervorgehobene Verbindung
 let draggingWaypoint = null; // { connId, index } | null
 let draggingLabel = null; // { connId } | null
 let connectMode = false, connectFrom = null; // connectFrom = { id, port } | { id, port: null }
@@ -192,6 +193,7 @@ function applyMode() {
   const label = $("#modeToggleLabel");
   document.body.classList.toggle("edit-mode", mode === "edit");
   document.body.classList.toggle("use-mode", mode === "use");
+  highlightedConnId = null;
 
   if (mode === "edit") {
     label.textContent = "BEARBEITUNGSMODUS";
@@ -286,6 +288,10 @@ viewport.addEventListener("mousedown", (e) => {
   if (selectedElementIds.size > 0) {
     elementLayer.querySelectorAll(".net-element.multi-selected").forEach((n) => n.classList.remove("multi-selected"));
     selectedElementIds.clear();
+  }
+  if (highlightedConnId) {
+    highlightedConnId = null;
+    renderConnections();
   }
 
   isPanning = true;
@@ -511,11 +517,11 @@ function buildElementNode(el) {
     elLinks.forEach((link, i) => {
       const btn = document.createElement("button");
       btn.className = "el-link-btn";
-      btn.textContent = "↗ " + (link.label || "Webseite " + (i + 1));
+      btn.textContent = getLinkIcon(link.url) + " " + (link.label || "Webseite " + (i + 1));
       btn.title = link.url;
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
-        window.open(link.url, "_blank", "noopener");
+        openLink(link.url);
       });
       linksWrap.appendChild(btn);
     });
@@ -724,6 +730,47 @@ function normalizeLinks(links) {
       return null;
     })
     .filter((l) => l && l.url);
+}
+
+/* Ermittelt das URL-Schema (http, https, rdp, vnc, ssh, ...) einer Adresse. */
+function getLinkScheme(url) {
+  const m = (url || "").match(/^([a-zA-Z][a-zA-Z0-9+.-]*):/);
+  return m ? m[1].toLowerCase() : "";
+}
+
+/* Passendes Icon je nach Protokoll fuer die Schaltflaeche am Element. */
+function getLinkIcon(url) {
+  const scheme = getLinkScheme(url);
+  if (scheme === "rdp") return "🖥";
+  if (scheme === "vnc") return "🖵";
+  if (scheme === "ssh" || scheme === "telnet") return "⌘";
+  return "↗";
+}
+
+/* Oeffnet eine hinterlegte Adresse. http(s) oeffnet einen neuen Tab.
+   Andere Protokolle (rdp://, vnc://, ssh://, ...) werden ueber einen
+   unsichtbaren Link-Klick ausgeloest, da window.open() dafuer in manchen
+   Browsern nicht zuverlaessig funktioniert bzw. vom Popup-Blocker
+   verhindert wird. So laesst sich z. B. eine Schaltflaeche anlegen, die
+   eine RDP-Verbindung (z. B. "rdp://192.168.1.10") direkt oeffnet, sofern
+   im Betriebssystem/Browser ein passender Handler registriert ist. */
+function openLink(url) {
+  const scheme = getLinkScheme(url);
+  if (scheme === "http" || scheme === "https" || scheme === "") {
+    window.open(url, "_blank", "noopener");
+    return;
+  }
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (e) {
+    window.open(url, "_blank", "noopener");
+  }
 }
 
 function getElementHost(el) {
@@ -958,6 +1005,31 @@ function renderLinksEditor() {
     urlInput.value = link.url || "";
     urlInput.addEventListener("input", () => { pendingLinks[i].url = urlInput.value; });
 
+    const schemeSelect = document.createElement("select");
+    schemeSelect.className = "link-edit-scheme";
+    schemeSelect.title = "Protokoll-Schnellauswahl";
+    [
+      { value: "https://", text: "Web" },
+      { value: "rdp://", text: "RDP" },
+      { value: "vnc://", text: "VNC" },
+      { value: "ssh://", text: "SSH" },
+      { value: "", text: "…" },
+    ].forEach((opt) => {
+      const o = document.createElement("option");
+      o.value = opt.value;
+      o.textContent = opt.text;
+      schemeSelect.appendChild(o);
+    });
+    const currentScheme = (link.url || "").match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//);
+    schemeSelect.value = currentScheme ? currentScheme[0] : "";
+    schemeSelect.addEventListener("change", () => {
+      if (!schemeSelect.value) return;
+      const withoutScheme = (urlInput.value || "").replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, "");
+      urlInput.value = schemeSelect.value + withoutScheme;
+      pendingLinks[i].url = urlInput.value;
+      urlInput.focus();
+    });
+
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
     removeBtn.className = "link-edit-remove";
@@ -969,6 +1041,7 @@ function renderLinksEditor() {
     });
 
     row.appendChild(labelInput);
+    row.appendChild(schemeSelect);
     row.appendChild(urlInput);
     row.appendChild(removeBtn);
     list.appendChild(row);
@@ -1140,12 +1213,10 @@ function renderConnections() {
     const dir1 = connectionDirection(fromEl, conn.from_port, conn.from_port_side);
     const dir2 = connectionDirection(toEl, conn.to_port, conn.to_port_side);
 
-    const path = conn.waypoints.length > 0
-      ? roundedPath([p1, ...conn.waypoints, p2], 20)
-      : buildAutoPath(p1, p2, dir1, dir2);
+    const path = buildSmoothPath([p1, ...conn.waypoints, p2], dir1, dir2);
 
     const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    group.style.pointerEvents = mode === "edit" ? "auto" : "none";
+    group.style.pointerEvents = "auto";
 
     const hitbox = document.createElementNS("http://www.w3.org/2000/svg", "path");
     hitbox.setAttribute("d", path);
@@ -1153,20 +1224,33 @@ function renderConnections() {
 
     const visible = document.createElementNS("http://www.w3.org/2000/svg", "path");
     visible.setAttribute("d", path);
-    visible.setAttribute("class", "conn-path");
+    visible.setAttribute("class", "conn-path" + (conn.id === highlightedConnId ? " highlighted" : ""));
     visible.setAttribute("stroke", conn.color || "#3ad6ff");
-    visible.setAttribute("stroke-width", conn.thickness || 4);
+    visible.setAttribute("stroke-width", (conn.thickness || 4) + (conn.id === highlightedConnId ? 3 : 0));
     visible.style.color = conn.color || "#3ad6ff";
     visible.style.pointerEvents = "none";
+    if (highlightedConnId && conn.id !== highlightedConnId) {
+      visible.style.opacity = "0.3";
+    }
 
     if (mode === "edit") {
       const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
-      title.textContent = "Klick: Details bearbeiten (Staerke, Wegpunkte zuruecksetzen, Loeschen)";
+      title.textContent = "Klick (an beliebiger Stelle der Leitung): Details bearbeiten (Staerke, Wegpunkte zuruecksetzen, Loeschen)";
       hitbox.appendChild(title);
 
       hitbox.addEventListener("click", () => {
         if (connectMode) return;
         openConnModal(conn.id);
+      });
+    } else {
+      const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+      title.textContent = "Klick: Leitung hervorheben";
+      hitbox.appendChild(title);
+
+      hitbox.addEventListener("click", (e) => {
+        e.stopPropagation();
+        highlightedConnId = highlightedConnId === conn.id ? null : conn.id;
+        renderConnections();
       });
     }
 
@@ -1266,19 +1350,40 @@ function renderConnections() {
         handle.setAttribute("class", "waypoint-handle");
         handle.style.fill = conn.color || "#3ad6ff";
         const wpTitle = document.createElementNS("http://www.w3.org/2000/svg", "title");
-        wpTitle.textContent = "Ziehen: Leitung umlegen – Doppelklick: Wegpunkt entfernen";
+        wpTitle.textContent = "Ziehen: Leitung umlegen";
         handle.appendChild(wpTitle);
         handle.addEventListener("mousedown", (e) => {
           e.stopPropagation();
           draggingWaypoint = { connId: conn.id, index: idx };
         });
-        handle.addEventListener("dblclick", (e) => {
+        group.appendChild(handle);
+
+        // Eigener, immer sichtbarer Entfernen-Button je Wegpunkt (zuverlaessiger
+        // als Doppelklick, da kein Timing-Konflikt mit dem Ziehen entstehen kann).
+        const delBtn = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        delBtn.setAttribute("class", "waypoint-delete-btn");
+        const delCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        delCircle.setAttribute("cx", wp.x + 12);
+        delCircle.setAttribute("cy", wp.y - 12);
+        delCircle.setAttribute("r", 6.5);
+        const delIcon = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        delIcon.setAttribute("x", wp.x + 12);
+        delIcon.setAttribute("y", wp.y - 12 + 3);
+        delIcon.setAttribute("text-anchor", "middle");
+        delIcon.textContent = "✕";
+        const delTitle = document.createElementNS("http://www.w3.org/2000/svg", "title");
+        delTitle.textContent = "Wegpunkt entfernen";
+        delBtn.appendChild(delCircle);
+        delBtn.appendChild(delIcon);
+        delBtn.appendChild(delTitle);
+        delBtn.addEventListener("mousedown", (e) => e.stopPropagation());
+        delBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           conn.waypoints.splice(idx, 1);
           renderConnections();
           persistConfig();
         });
-        group.appendChild(handle);
+        group.appendChild(delBtn);
       });
     }
 
@@ -1291,7 +1396,7 @@ function renderConnections() {
    konkreten Port zeigt die Leitung senkrecht von der Portseite weg, damit
    Leitungen nicht quer durch das Element oder andere Elemente laufen und
    sich weniger leicht "verknoten". Ohne konkreten Port: keine feste
-   Richtung (automatische Heuristik in buildAutoPath). */
+   Richtung. */
 function connectionDirection(el, portIndex, portSide) {
   if (portIndex === null || portIndex === undefined) return null;
   if (!hasPorts(el.type)) return null;
@@ -1300,48 +1405,59 @@ function connectionDirection(el, portIndex, portSide) {
   return { bottom: { x: 0, y: 1 }, top: { x: 0, y: -1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } }[side];
 }
 
-/* Automatisches Routing ohne manuelle Wegpunkte: weiche Bezierkurve, die an
-   Ports senkrecht zur Portseite abgeht (verhindert Kreuzungen durch das
-   Element selbst) und sich sonst am Verlauf zwischen den Punkten orientiert. */
-function buildAutoPath(p1, p2, dir1, dir2) {
-  const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-  const curveLen = Math.max(50, Math.min(160, dist * 0.5));
-  const d1 = dir1 || autoDirection(p1, p2);
-  const d2 = dir2 || autoDirection(p2, p1);
-  const c1 = { x: p1.x + d1.x * curveLen, y: p1.y + d1.y * curveLen };
-  const c2 = { x: p2.x + d2.x * curveLen, y: p2.y + d2.y * curveLen };
-  return `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
-}
-function autoDirection(from, to) {
-  const dx = to.x - from.x, dy = to.y - from.y;
-  if (Math.abs(dx) >= Math.abs(dy)) return { x: Math.sign(dx) || 1, y: 0 };
-  return { x: 0, y: Math.sign(dy) || 1 };
-}
-
-/* Manuelles Routing durch die vom Nutzer gesetzten Wegpunkte: gerade
-   Teilstrecken mit sanft abgerundeten Ecken (wie bei physischen
-   Kabelverlegungen), damit man die Leitung gezielt anders herum verlegen
-   kann, um Ueberschneidungen zu vermeiden. */
-function roundedPath(points, radius) {
-  if (points.length < 2) return "";
-  if (points.length === 2) {
+/* Einheitliches Routing fuer Verbindungen – erzeugt IMMER eine weiche,
+   fliessende Kurve (auch wenn manuelle Wegpunkte gesetzt sind), statt
+   Wegpunkte nur mit geraden Teilstrecken zu verbinden. An den Enden wird,
+   falls vorhanden, die Portrichtung (dir1/dir2) beibehalten, damit
+   Leitungen weiterhin senkrecht zur Portseite abgehen (Anti-Verknoten).
+   Dazwischenliegende Wegpunkte erhalten eine Catmull-Rom-aehnliche
+   Tangente basierend auf ihren Nachbarpunkten fuer eine gleichmaessige,
+   runde Linienfuehrung. */
+function buildSmoothPath(points, dir1, dir2) {
+  const n = points.length;
+  if (n < 2) return "";
+  if (n === 2 && !dir1 && !dir2) {
     return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
   }
+
+  const segLen = (a, b) => {
+    const d = Math.hypot(b.x - a.x, b.y - a.y);
+    return Math.max(40, Math.min(160, d * 0.5));
+  };
+  const normalize = (v) => {
+    const len = Math.hypot(v.x, v.y) || 1;
+    return { x: v.x / len, y: v.y / len };
+  };
+
   let d = `M ${points[0].x} ${points[0].y} `;
-  for (let i = 1; i < points.length - 1; i++) {
-    const prev = points[i - 1], curr = points[i], next = points[i + 1];
-    const segLen1 = Math.hypot(curr.x - prev.x, curr.y - prev.y) || 1;
-    const segLen2 = Math.hypot(next.x - curr.x, next.y - curr.y) || 1;
-    const v1 = { x: (curr.x - prev.x) / segLen1, y: (curr.y - prev.y) / segLen1 };
-    const v2 = { x: (next.x - curr.x) / segLen2, y: (next.y - curr.y) / segLen2 };
-    const cut1 = Math.min(radius, segLen1 / 2);
-    const cut2 = Math.min(radius, segLen2 / 2);
-    const before = { x: curr.x - v1.x * cut1, y: curr.y - v1.y * cut1 };
-    const after = { x: curr.x + v2.x * cut2, y: curr.y + v2.y * cut2 };
-    d += `L ${before.x} ${before.y} Q ${curr.x} ${curr.y}, ${after.x} ${after.y} `;
+
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = points[i], p1 = points[i + 1];
+    const len = segLen(p0, p1);
+
+    let cpA;
+    if (i === 0 && dir1) {
+      cpA = { x: p0.x + dir1.x * len, y: p0.y + dir1.y * len };
+    } else {
+      const prev = points[i - 1] || p0;
+      const next = points[i + 1];
+      const t = normalize({ x: next.x - prev.x, y: next.y - prev.y });
+      cpA = { x: p0.x + t.x * (len / 2.2), y: p0.y + t.y * (len / 2.2) };
+    }
+
+    let cpB;
+    if (i + 1 === n - 1 && dir2) {
+      cpB = { x: p1.x + dir2.x * len, y: p1.y + dir2.y * len };
+    } else {
+      const prevOfNext = points[i];
+      const nextOfNext = points[i + 2];
+      const t = normalize({ x: nextOfNext.x - prevOfNext.x, y: nextOfNext.y - prevOfNext.y });
+      cpB = { x: p1.x - t.x * (len / 2.2), y: p1.y - t.y * (len / 2.2) };
+    }
+
+    d += `C ${cpA.x} ${cpA.y}, ${cpB.x} ${cpB.y}, ${p1.x} ${p1.y} `;
   }
-  const last = points[points.length - 1];
-  d += `L ${last.x} ${last.y}`;
+
   return d;
 }
 
@@ -1596,7 +1712,7 @@ function connectionEndpoint(el, portIndex, portSide) {
 }
 
 /* Geschwungene, dicke Verbindungslinien im Stil von harness.design –
-   siehe buildAutoPath() weiter oben fuer das eigentliche Routing. */
+   siehe buildSmoothPath() weiter oben fuer das eigentliche Routing. */
 
 function openConnModal(id) {
   editingConnId = id;

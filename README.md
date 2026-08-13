@@ -2,7 +2,7 @@
 
 # Netzwerkplan
 
-**Aktuelle Version: 1.9.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.10.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -177,18 +177,22 @@ solange gültiges JSON erhalten bleibt.
   (entfernt alle Wegpunkte auf einmal).
 - **Leitungen umlegen:** Über „+ Wegpunkt hier" im Kontextmenü lassen sich
   frei verschiebbare Wegpunkte setzen, um die Leitung gezielt um andere
-  Elemente herumzuführen. Doppelklick auf einen vorhandenen Wegpunkt
-  entfernt ihn wieder.
+  Elemente herumzuführen (weiche, fließende Kurve). Jeder Wegpunkt hat
+  einen eigenen „✕"-Button zum Entfernen direkt daneben.
 - **Bezeichnung platzieren:** Eine gesetzte Bezeichnung lässt sich per
   Ziehen frei verschieben (mit gestrichelter Führungslinie zur Leitung,
   wenn sie weiter weg gesetzt wird).
 - **Mehrere Webseiten je Element:** Im Element-Dialog lassen sich beliebig
   viele Webseiten mit eigener Bezeichnung hinterlegen („+ Webseite
   hinzufügen"). Jede erscheint als eigene, benannte Schaltfläche direkt
-  auf dem Element (z. B. „↗ Admin-Oberfläche", „↗ Grafana").
+  auf dem Element (z. B. „↗ Admin-Oberfläche", „↗ Grafana"). Über die
+  Protokoll-Schnellauswahl lassen sich auch Schaltflächen für RDP, VNC
+  oder SSH anlegen (z. B. „rdp://192.168.1.10" für Remotedesktop).
 - **Nutzungsmodus**: Keine Änderungen möglich, es können ausschließlich
   über die Webseiten-Schaltflächen auf jedem Element die hinterlegten
-  Seiten in neuen Tabs geöffnet werden.
+  Seiten geöffnet werden. Ein Klick auf eine Leitung hebt sie vollständig
+  hervor (andere Leitungen werden abgedunkelt) – erneuter Klick oder
+  Klick auf leere Fläche hebt die Hervorhebung wieder auf.
 - **Zoom/Pan**: Mausrad zum Zoomen, Ziehen auf leerer Fläche zum Verschieben
   der Ansicht, +/−/⤢ oben rechts als Alternative.
 - **IP-Anzeige:** Jedes Element zeigt automatisch die aus der ersten

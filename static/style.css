@@ -462,9 +462,13 @@ body.use-mode .divider.edit-divider {
   cursor: pointer;
   pointer-events: stroke;
   filter: drop-shadow(0 0 3px rgba(0,0,0,0.6));
+  transition: opacity 0.15s ease;
 }
 .conn-path:hover { filter: drop-shadow(0 0 6px currentColor); }
-.conn-hitbox { fill: none; stroke: transparent; stroke-width: 20; pointer-events: stroke; cursor: pointer; }
+.conn-path.highlighted {
+  filter: drop-shadow(0 0 10px currentColor) drop-shadow(0 0 3px #fff);
+}
+.conn-hitbox { fill: none; stroke: transparent; stroke-width: 22; pointer-events: stroke; cursor: pointer; }
 .conn-label {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -488,6 +492,22 @@ body.use-mode .divider.edit-divider {
 }
 .waypoint-handle:hover { stroke-width: 2.5px; }
 .waypoint-handle:active { cursor: grabbing; }
+
+.waypoint-delete-btn { cursor: pointer; }
+.waypoint-delete-btn circle {
+  fill: var(--bg-1);
+  stroke: var(--danger);
+  stroke-width: 1px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+}
+.waypoint-delete-btn text {
+  font-size: 8px;
+  fill: var(--danger);
+  pointer-events: none;
+  user-select: none;
+}
+.waypoint-delete-btn:hover circle { fill: var(--danger); }
+.waypoint-delete-btn:hover text { fill: #fff; }
 
 /* Bearbeiten-Button an jeder Leitung (analog zum ✎ an Elementen) */
 .conn-edit-btn { cursor: pointer; }
@@ -545,6 +565,10 @@ body.use-mode .divider.edit-divider {
   border-radius: 6px;
   padding: 20px;
   box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+}
+.modal.modal-wide {
+  width: 560px;
+  max-width: 94vw;
 }
 .modal h2 {
   margin: 0 0 16px 0;
@@ -677,7 +701,7 @@ body.use-mode .divider.edit-divider {
   gap: 6px;
 }
 .link-edit-label {
-  width: 38%;
+  width: 32%;
   flex-shrink: 0;
   background: var(--bg-1);
   border: 1px solid var(--border);
@@ -687,6 +711,18 @@ body.use-mode .divider.edit-divider {
   color: var(--text-0);
   font-family: var(--font-main);
 }
+.link-edit-scheme {
+  flex-shrink: 0;
+  width: 58px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 3px;
+  font-size: 10.5px;
+  color: var(--text-1);
+  font-family: var(--font-mono);
+}
+.link-edit-scheme:focus { outline: none; border-color: var(--accent); }
 .link-edit-url {
   flex: 1;
   min-width: 0;

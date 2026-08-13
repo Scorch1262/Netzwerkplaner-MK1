@@ -2,6 +2,45 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.10.0] – Hervorhebung im Nutzermodus, RDP-Schaltflächen, weiche Kurven, diverse Verbesserungen
+
+**Wichtig: Abwärtskompatibilität.** Alle Änderungen dieser Version wurden
+so umgesetzt, dass bestehende `config.json`-Dateien aus **allen**
+bisherigen Versionen (auch das ursprüngliche v1.0-Format ohne Ports,
+Wegpunkte, Portnamen usw.) unverändert weiter funktionieren. Es wurde kein
+bestehendes Feld umbenannt oder entfernt.
+
+- **Leitung im Nutzungsmodus hervorheben:** Ein Klick auf eine Leitung im
+  Nutzungsmodus hebt sie jetzt vollständig hervor (Leuchteffekt, dickerer
+  Strich), andere Leitungen werden zur besseren Unterscheidung abgedunkelt.
+  Erneuter Klick auf dieselbe Leitung, Klick auf leere Fläche oder
+  Moduswechsel heben die Hervorhebung wieder auf.
+- **Wegpunkte wieder zuverlässig entfernbar:** Jeder Wegpunkt hat jetzt
+  zusätzlich zum Ziehen-Griff einen eigenen, immer sichtbaren „✕"-Button
+  direkt daneben – zuverlässiger als die bisherige
+  Doppelklick-Erkennung, die in bestimmten Situationen ins Leere laufen
+  konnte.
+- **RDP/VNC/SSH-Schaltflächen:** Schaltflächen an Elementen lassen sich
+  jetzt auch für Protokolle wie `rdp://`, `vnc://` oder `ssh://` anlegen
+  (z. B. `rdp://192.168.1.10` für eine Remotedesktop-Verbindung). Der
+  Link-Editor im Element-Dialog hat dafür eine Protokoll-Schnellauswahl
+  (Web/RDP/VNC/SSH). Das Öffnen erfolgt zuverlässiger als zuvor (kein
+  Popup-Blocker-Problem bei benutzerdefinierten Protokollen), die
+  Schaltfläche zeigt zudem ein passendes Symbol.
+- **Breiterer Element-Dialog:** Der Bearbeiten-Dialog für Elemente ist
+  jetzt deutlich breiter, damit alle Felder der Webseiten-/Schaltflächen-
+  Liste (Bezeichnung, Protokoll, URL, Entfernen) bequem nebeneinander
+  Platz haben.
+- **Verbindungen überall anklickbar:** Der klickbare Bereich entlang einer
+  Leitung wurde nochmals vergrößert – eine Verbindung lässt sich an jeder
+  Stelle der Linie anklicken, um den Bearbeiten-Dialog zu öffnen, nicht
+  nur über den „✎"-Button.
+- **Weiche Kurven durch Wegpunkte:** Manuell gesetzte Wegpunkte erzeugen
+  jetzt durchgehend weiche, fließende Kurven (statt gerader Teilstrecken
+  mit abgerundeten Ecken) – die Leitung verläuft dadurch deutlich
+  natürlicher, während die bisherige Anti-Verknoten-Eigenschaft an Ports
+  (senkrechter Austritt) erhalten bleibt.
+
 ## [1.9.0] – Patchfeld: Ports auf zwei gegenüberliegenden Seiten (parallel nummeriert/benannt)
 
 - **Neu:** Das Element „Patchfeld" zeigt seine Ports jetzt automatisch auf
