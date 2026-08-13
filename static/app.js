@@ -813,9 +813,12 @@ function downloadRdpFile(url) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(blobUrl), 4000);
 
-  setStatus(
-    "RDP-Datei fuer " + target + " heruntergeladen – zum Verbinden die " +
-    "heruntergeladene .rdp-Datei oeffnen."
+  setStatus("RDP-Datei fuer " + target + " heruntergeladen.");
+  showToast(
+    "⬇ RDP-Datei heruntergeladen (" + fileNameBase + ".rdp). " +
+    "Zum Verbinden bitte einmal öffnen – Browser dürfen Downloads aus " +
+    "Sicherheitsgründen nicht automatisch ausführen.",
+    7000
   );
 }
 
@@ -1856,6 +1859,26 @@ $("#btnSave").addEventListener("click", persistConfig);
 
 function setStatus(text) {
   $("#statusText").textContent = text;
+}
+
+/* Gut sichtbare, kurzzeitig eingeblendete Meldung (z. B. fuer den Hinweis
+   nach einem Datei-Download) – im Gegensatz zur duennen Statuszeile am
+   unteren Rand leichter zu bemerken. */
+let toastTimer = null;
+function showToast(message, durationMs) {
+  let toast = document.getElementById("appToast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "appToast";
+    toast.className = "app-toast";
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add("visible");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.remove("visible");
+  }, durationMs || 5000);
 }
 
 /* ------------------------------------------------------------------ */

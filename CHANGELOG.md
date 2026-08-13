@@ -2,6 +2,25 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.10.4] – Deutlicherer Hinweis nach RDP-Download (Browser-Grenze, keine App-Einschränkung)
+
+- **Wichtig zu wissen:** Kein Browser erlaubt es einer Webseite, eine
+  heruntergeladene Datei selbstständig auszuführen (Sicherheitsgrund –
+  sonst könnte jede Webseite beliebige Programme starten). Das betrifft
+  **alle** RDP-Web-Lösungen gleichermaßen, auch Microsofts eigenen
+  „RD Web Access"/Azure Virtual Desktop: Datei wird heruntergeladen, der
+  Nutzer muss sie einmal anklicken, um die Remotedesktopverbindung zu
+  starten. Das lässt sich technisch nicht umgehen.
+- Damit dieser letzte, notwendige Klick nicht übersehen wird, zeigt die
+  App nach dem RDP-Download jetzt eine deutlich sichtbare Einblendung
+  (Toast) mit Anleitung, statt nur einer dezenten Meldung in der
+  Statuszeile.
+- **Tipp für „gefühlt automatisch":** Chrome/Edge zeigen nach dem ersten
+  Download unten einen Pfeil neben der Datei – dort „Dateien dieses Typs
+  immer öffnen" auswählen. Danach öffnet ein Klick auf den RDP-Button
+  die Remotedesktopverbindung ohne weiteren Zwischenschritt.
+- Keine Änderung am Datenformat.
+
 ## [1.10.3] – RDP-Schaltflächen funktionieren jetzt unter Windows
 
 - **Ursache:** Windows registriert das Protokoll `rdp://` standardmäßig
