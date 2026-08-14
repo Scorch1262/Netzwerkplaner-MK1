@@ -85,6 +85,7 @@ let dragGroup = null; // { ids, nodes, startPositions, startPointerCanvas } | nu
 let selectedElementIds = new Set();
 let marqueeState = null; // { startX, startY, el } | null
 let highlightedConnId = null; // im Nutzermodus per Klick hervorgehobene Verbindung
+let highlightedLocation = null; // per Klick auf einen Standort hervorgehobene Elemente (gleicher Ort)
 let draggingWaypoint = null; // { connId, index } | null
 let draggingLabel = null; // { connId } | null
 let connectMode = false, connectFrom = null; // connectFrom = { id, port } | { id, port: null }
@@ -194,6 +195,7 @@ function applyMode() {
   document.body.classList.toggle("edit-mode", mode === "edit");
   document.body.classList.toggle("use-mode", mode === "use");
   highlightedConnId = null;
+  highlightedLocation = null;
 
   if (mode === "edit") {
     label.textContent = "BEARBEITUNGSMODUS";
@@ -292,6 +294,10 @@ viewport.addEventListener("mousedown", (e) => {
   if (highlightedConnId) {
     highlightedConnId = null;
     renderConnections();
+  }
+  if (highlightedLocation) {
+    highlightedLocation = null;
+    renderElements();
   }
 
   isPanning = true;
@@ -482,6 +488,9 @@ function buildElementNode(el) {
   node.style.left = el.x + "px";
   node.style.top = el.y + "px";
   if (selectedElementIds.has(el.id)) node.classList.add("multi-selected");
+  if (highlightedLocation) {
+    node.classList.add(el.location === highlightedLocation ? "location-highlighted" : "location-dimmed");
+  }
 
   const elLinks = normalizeLinks(el.links);
   const portCount = getPortCount(el);
@@ -510,6 +519,18 @@ function buildElementNode(el) {
     ${hostDisplay ? `<div class="el-ip" title="Eingestellte IP / Adresse">IP: ${escapeHtml(hostDisplay)}</div>` : ""}
   `;
   node.appendChild(body);
+
+  if (el.location) {
+    const locationEl = body.querySelector(".el-location");
+    locationEl.classList.add("el-location-clickable");
+    locationEl.title = "Klick: alle Elemente am Standort „" + el.location + "\" hervorheben";
+    locationEl.addEventListener("mousedown", (e) => e.stopPropagation());
+    locationEl.addEventListener("click", (e) => {
+      e.stopPropagation();
+      highlightedLocation = highlightedLocation === el.location ? null : el.location;
+      renderElements();
+    });
+  }
 
   if (elLinks.length > 0) {
     const linksWrap = document.createElement("div");
@@ -885,11 +906,27 @@ function startDraggingElement(id, node, e) {
         gNode.classList.add("dragging");
       }
     });
+
+    // Verbindungen, deren beide Enden innerhalb der Auswahl liegen, werden
+    // beim Verschieben starr mitgenommen (inkl. Wegpunkte und Bezeichnung),
+    // damit ihre Form/Linienfuehrung erhalten bleibt.
+    const idSet = new Set(Object.keys(nodes));
+    const connSnapshots = {};
+    config.connections.forEach((c) => {
+      if (idSet.has(c.from) && idSet.has(c.to)) {
+        connSnapshots[c.id] = {
+          waypoints: Array.isArray(c.waypoints) ? c.waypoints.map((wp) => ({ x: wp.x, y: wp.y })) : [],
+          label_at: c.label_at ? { x: c.label_at.x, y: c.label_at.y } : null,
+        };
+      }
+    });
+
     dragGroup = {
       ids: Object.keys(nodes),
       nodes,
       startPositions,
       startPointerCanvas: clientToCanvas(e.clientX, e.clientY),
+      connSnapshots,
     };
   } else {
     if (selectedElementIds.size > 0) {
@@ -938,6 +975,19 @@ function moveDragGroup(e) {
     node.style.left = gEl.x + "px";
     node.style.top = gEl.y + "px";
   });
+
+  // Wegpunkte/Bezeichnung der vollstaendig innerhalb der Auswahl liegenden
+  // Verbindungen starr mitverschieben, damit ihre Form erhalten bleibt.
+  Object.keys(dragGroup.connSnapshots).forEach((connId) => {
+    const conn = config.connections.find((c) => c.id === connId);
+    const snap = dragGroup.connSnapshots[connId];
+    if (!conn || !snap) return;
+    conn.waypoints = snap.waypoints.map((wp) => ({ x: wp.x + dx, y: wp.y + dy }));
+    if (snap.label_at) {
+      conn.label_at = { x: snap.label_at.x + dx, y: snap.label_at.y + dy };
+    }
+  });
+
   renderConnections();
 }
 
@@ -1899,6 +1949,14 @@ function bindGlobalEvents() {
       if (selectedElementIds.size > 0) {
         elementLayer.querySelectorAll(".net-element.multi-selected").forEach((n) => n.classList.remove("multi-selected"));
         selectedElementIds.clear();
+      }
+      if (highlightedConnId) {
+        highlightedConnId = null;
+        renderConnections();
+      }
+      if (highlightedLocation) {
+        highlightedLocation = null;
+        renderElements();
       }
       if (connectMode) {
         connectMode = false;

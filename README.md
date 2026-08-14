@@ -2,7 +2,7 @@
 
 # Netzwerkplan
 
-**Aktuelle Version: 1.10.4** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.11.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -187,8 +187,16 @@ solange gültiges JSON erhalten bleibt.
   gehaltener Umschalttaste (Shift) auf leerer Fläche ziehen, um einen
   Auswahlrahmen aufzuziehen. Alle berührten Elemente werden markiert
   (orange Umrandung) – anschließend an einem davon ziehen, um alle
-  markierten Elemente parallel zu verschieben. Klick auf leere Fläche
-  ohne Shift oder Escape hebt die Auswahl wieder auf.
+  markierten Elemente parallel zu verschieben. Verbindungen zwischen
+  zwei markierten Elementen (inkl. ihrer Wegpunkte und
+  Bezeichnungs-Position) werden dabei exakt mitverschoben, sodass ihre
+  Form erhalten bleibt. Klick auf leere Fläche ohne Shift oder Escape
+  hebt die Auswahl wieder auf.
+- **Hervorhebung nach Standort:** Klick auf die Standort-Angabe eines
+  Elements hebt – wie bei Leitungen – alle Elemente mit demselben
+  Standort hervor und dimmt die übrigen ab. Erneuter Klick, Klick auf
+  leere Fläche oder Escape heben die Hervorhebung wieder auf
+  (funktioniert im Bearbeitungs- und im Nutzungsmodus).
 - **Leitungen bearbeiten:** Jede Leitung zeigt im Bearbeitungsmodus einen
   eigenen „✎"-Button (wie an den Elementen), der ein Menü öffnet, um die
   Bezeichnung zu ändern, die Farbe anzupassen, einen Wegpunkt an dieser

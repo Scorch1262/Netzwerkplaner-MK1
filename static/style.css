@@ -253,6 +253,14 @@ body.use-mode .divider.edit-divider {
   border-color: var(--accent-2);
   box-shadow: 0 0 0 2px var(--accent-2), 0 0 14px rgba(255,138,61,0.35);
 }
+.net-element.location-highlighted {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent), 0 0 16px rgba(58,214,255,0.45);
+  z-index: 5;
+}
+.net-element.location-dimmed {
+  opacity: 0.3;
+}
 .edit-mode .net-element { cursor: grab; }
 .edit-mode .net-element.dragging { cursor: grabbing; opacity: 0.85; z-index: 50; }
 
@@ -336,6 +344,12 @@ body.use-mode .divider.edit-divider {
   white-space: nowrap;
   margin-bottom: 6px;
 }
+.el-location-clickable {
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.el-location-clickable:hover { color: var(--accent); }
 .el-ip {
   font-family: var(--font-mono);
   font-size: 10px;

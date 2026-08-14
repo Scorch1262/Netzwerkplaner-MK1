@@ -2,6 +2,24 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.11.0] – Wegpunkte bei Gruppen-Verschiebung mitnehmen, Hervorhebung nach Standort
+
+- **Verbindungen bei Gruppen-Verschiebung mitnehmen:** Wird über den
+  Auswahlrahmen (Shift + Ziehen) eine Gruppe von Elementen markiert und
+  gemeinsam verschoben, werden jetzt auch die **Wegpunkte und die
+  Bezeichnungs-Position** aller Verbindungen, deren **beide** Enden
+  innerhalb der Auswahl liegen, exakt im gleichen Maß mitverschoben. Die
+  Form/Linienführung bleibt dadurch beim Verschieben vollständig
+  erhalten, statt zu verzerren. Verbindungen zu Elementen außerhalb der
+  Auswahl bleiben unverändert an ihren Wegpunkten hängen (wie bisher).
+- **Hervorhebung nach Standort:** Ein Klick auf die Standort-Angabe eines
+  Elements hebt jetzt – genau wie bei Leitungen – **alle Elemente mit
+  demselben Standort** hervor (leuchtender Rahmen) und dimmt alle
+  anderen Elemente ab. Erneuter Klick auf denselben Standort, Klick auf
+  leere Fläche, Moduswechsel oder Escape heben die Hervorhebung wieder
+  auf. Funktioniert sowohl im Bearbeitungs- als auch im Nutzungsmodus.
+- Keine Änderung am Datenformat.
+
 ## [1.10.4] – Deutlicherer Hinweis nach RDP-Download (Browser-Grenze, keine App-Einschränkung)
 
 - **Wichtig zu wissen:** Kein Browser erlaubt es einer Webseite, eine
