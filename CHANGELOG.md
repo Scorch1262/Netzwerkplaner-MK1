@@ -2,6 +2,29 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.11.2] – URL-Feld im Link-Editor tatsächlich breit (CSS-Spezifitäts-Bug behoben)
+
+- **Ursache gefunden:** Die allgemeine Regel `.modal select { width: 100%; }`
+  (für Felder wie „Typ") hatte durch die zusätzliche Element-Selektor-
+  Komponente eine **höhere CSS-Spezifität** als die schmale
+  `.link-edit-scheme`-Klasse für die Protokoll-Auswahl. Dadurch wurde das
+  Protokoll-Dropdown (Web/RDP/VNC/SSH) trotz `width: 64px` auf 100%
+  aufgeblasen; da es zusätzlich `flex-shrink: 0` hatte, konnte es sich
+  nicht wieder verkleinern und quetschte das URL-Feld auf einen winzigen,
+  unlesbaren Streifen zusammen – genau das im Screenshot gezeigte
+  Verhalten.
+- **Fix:** Die Regeln für Bezeichnung, Protokoll-Auswahl und URL sind
+  jetzt dreifach verschachtelt qualifiziert
+  (`.links-edit-list .link-edit-bottom .link-edit-scheme` usw.) und
+  nutzen `flex: 0 0 64px` bzw. `flex: 1 1 auto` als Kurzschreibweise.
+  Dadurch gewinnen sie zuverlässig gegen die allgemeine Modal-Feld-Regel,
+  unabhängig von deren Position im Stylesheet.
+- Mit berechneten CSS-Werten (nicht nur Selektor-Theorie) verifiziert:
+  Protokoll-Auswahl bleibt exakt bei 64px (`flex-grow: 0`), das URL-Feld
+  wächst (`flex-grow: 1`) und bekommt den verbleibenden Platz in voller
+  Breite.
+- Rein optische Änderung – keine Änderung am Datenformat.
+
 ## [1.11.1] – Link-Editor: Felder gestapelt statt nebeneinander (URL-Feld deutlich breiter)
 
 - **Problem:** Im Link-Editor des Element-Dialogs standen Bezeichnung,

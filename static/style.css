@@ -756,9 +756,16 @@ body.use-mode .divider.edit-divider {
   align-items: center;
   gap: 6px;
 }
-.link-edit-label {
-  flex: 1;
+/* Wichtig: mit Elternklasse (.link-edit-top / .link-edit-bottom) qualifiziert,
+   damit diese Regeln zuverlaessig die allgemeine ".modal select" /
+   ".modal input[type=text]"-Regel (Spezifitaet: 1 Klasse + 1 Elementtyp)
+   ueberstimmen. Ausserdem flex-basis statt width setzen, damit sich nichts
+   mehr am nachtraeglich per Kaskade veraenderten width-Wert verschluckt. */
+.links-edit-list .link-edit-top .link-edit-label {
+  flex: 1 1 auto;
   min-width: 0;
+  width: auto;
+  margin-top: 0;
   background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: 3px;
@@ -767,9 +774,11 @@ body.use-mode .divider.edit-divider {
   color: var(--text-0);
   font-family: var(--font-main);
 }
-.link-edit-scheme {
-  flex-shrink: 0;
+.links-edit-list .link-edit-bottom .link-edit-scheme {
+  flex: 0 0 64px;
+  min-width: 0;
   width: 64px;
+  margin-top: 0;
   background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: 3px;
@@ -778,11 +787,12 @@ body.use-mode .divider.edit-divider {
   color: var(--text-1);
   font-family: var(--font-mono);
 }
-.link-edit-scheme:focus { outline: none; border-color: var(--accent); }
-.link-edit-url {
-  flex: 1;
+.links-edit-list .link-edit-bottom .link-edit-scheme:focus { outline: none; border-color: var(--accent); }
+.links-edit-list .link-edit-bottom .link-edit-url {
+  flex: 1 1 auto;
   min-width: 0;
-  width: 100%;
+  width: auto;
+  margin-top: 0;
   background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: 3px;
@@ -791,7 +801,8 @@ body.use-mode .divider.edit-divider {
   color: var(--text-0);
   font-family: var(--font-mono);
 }
-.link-edit-label:focus, .link-edit-url:focus { outline: none; border-color: var(--accent); }
+.links-edit-list .link-edit-top .link-edit-label:focus,
+.links-edit-list .link-edit-bottom .link-edit-url:focus { outline: none; border-color: var(--accent); }
 .link-edit-remove {
   flex-shrink: 0;
   width: 26px;
