@@ -1089,13 +1089,34 @@ function renderLinksEditor() {
     const row = document.createElement("div");
     row.className = "link-edit-row";
 
+    // --- Obere Zeile: Bezeichnung + Entfernen-Button ---
+    const topRow = document.createElement("div");
+    topRow.className = "link-edit-top";
+
     const labelInput = document.createElement("input");
     labelInput.type = "text";
     labelInput.className = "link-edit-label";
     labelInput.maxLength = 40;
-    labelInput.placeholder = "Bezeichnung (z. B. Admin, Grafana)";
+    labelInput.placeholder = "Bezeichnung (z. B. Admin, Grafana, Remotedesktop)";
     labelInput.value = link.label || "";
     labelInput.addEventListener("input", () => { pendingLinks[i].label = labelInput.value; });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "link-edit-remove";
+    removeBtn.title = "Diese Webseite entfernen";
+    removeBtn.textContent = "✕";
+    removeBtn.addEventListener("click", () => {
+      pendingLinks.splice(i, 1);
+      renderLinksEditor();
+    });
+
+    topRow.appendChild(labelInput);
+    topRow.appendChild(removeBtn);
+
+    // --- Untere Zeile: Protokoll-Auswahl + URL (bekommt den meisten Platz) ---
+    const bottomRow = document.createElement("div");
+    bottomRow.className = "link-edit-bottom";
 
     const urlInput = document.createElement("input");
     urlInput.type = "text";
@@ -1129,20 +1150,11 @@ function renderLinksEditor() {
       urlInput.focus();
     });
 
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "link-edit-remove";
-    removeBtn.title = "Diese Webseite entfernen";
-    removeBtn.textContent = "✕";
-    removeBtn.addEventListener("click", () => {
-      pendingLinks.splice(i, 1);
-      renderLinksEditor();
-    });
+    bottomRow.appendChild(schemeSelect);
+    bottomRow.appendChild(urlInput);
 
-    row.appendChild(labelInput);
-    row.appendChild(schemeSelect);
-    row.appendChild(urlInput);
-    row.appendChild(removeBtn);
+    row.appendChild(topRow);
+    row.appendChild(bottomRow);
     list.appendChild(row);
   });
 }

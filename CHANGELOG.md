@@ -2,6 +2,23 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.11.1] – Link-Editor: Felder gestapelt statt nebeneinander (URL-Feld deutlich breiter)
+
+- **Problem:** Im Link-Editor des Element-Dialogs standen Bezeichnung,
+  Protokoll-Auswahl, URL und Entfernen-Button alle in einer Zeile
+  nebeneinander. Dadurch blieb für die URL kaum Platz – bei längeren
+  Adressen (z. B. `rdp://192.168.1.10:3390`) war im Feld kaum etwas
+  lesbar.
+- **Lösung:** Jede Webseite/Schaltfläche wird jetzt als kleine, zweizeilige
+  Karte dargestellt:
+  - **Obere Zeile:** Bezeichnung (volle Breite) + Entfernen-Button.
+  - **Untere Zeile:** Protokoll-Auswahl (schmal) + URL (nimmt die
+    verbleibende Breite fast vollständig ein).
+- Dadurch ist die URL jetzt gut lesbar und bearbeitbar, auch bei
+  längeren Adressen mit Port-Angabe.
+- Rein optische Änderung – keine Änderung am Datenformat, bestehende
+  `config.json`-Dateien funktionieren unverändert weiter.
+
 ## [1.11.0] – Wegpunkte bei Gruppen-Verschiebung mitnehmen, Hervorhebung nach Standort
 
 - **Verbindungen bei Gruppen-Verschiebung mitnehmen:** Wird über den

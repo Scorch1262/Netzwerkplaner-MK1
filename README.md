@@ -1,8 +1,8 @@
-![Bild](Unbenannt.PNG)
-
 # Netzwerkplan
 
-**Aktuelle Version: 1.11.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+![Bild](Unbenannt.PNG)
+
+**Aktuelle Version: 1.11.1** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
