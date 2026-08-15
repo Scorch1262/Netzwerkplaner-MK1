@@ -2,6 +2,7 @@
 
 ![Bild](Unbenannt.PNG)
 
+
 **Aktuelle Version: 1.11.2** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
