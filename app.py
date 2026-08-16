@@ -23,6 +23,16 @@ import copy
 
 from flask import Flask, request, jsonify, render_template
 
+# paho-mqtt ist optional zur Laufzeit: Fehlt es, soll der Server trotzdem
+# starten - nur der MQTT-Endpunkt liefert dann eine verstaendliche
+# Fehlermeldung statt eines Startabsturzes.
+try:
+    import paho.mqtt.publish as mqtt_publish
+    MQTT_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    mqtt_publish = None
+    MQTT_AVAILABLE = False
+
 # --------------------------------------------------------------------------
 # Pfad-Hilfsfunktionen (wichtig für PyInstaller --onefile)
 # --------------------------------------------------------------------------
@@ -126,6 +136,72 @@ def api_save_config():
     if not isinstance(data, dict):
         return jsonify({"status": "error", "message": "Ungueltige Daten"}), 400
     save_config(data)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/mqtt-publish", methods=["POST"])
+def api_mqtt_publish():
+    """Versendet eine MQTT-Nachricht ueber den angegebenen Broker.
+
+    Laeuft als Backend-Proxy, da Browser aus Sicherheitsgruenden kein
+    rohes TCP/MQTT sprechen koennen - der eigentliche MQTT-Connect/
+    Publish/Disconnect passiert hier serverseitig mit paho-mqtt.
+    """
+    if not MQTT_AVAILABLE:
+        return jsonify({
+            "status": "error",
+            "message": "Das Python-Paket 'paho-mqtt' ist nicht installiert. "
+                       "Bitte 'pip install paho-mqtt' ausfuehren (siehe requirements.txt) "
+                       "und den Server neu starten.",
+        }), 501
+
+    data = request.get_json(force=True, silent=True) or {}
+
+    broker = str(data.get("broker") or "").strip()
+    topic = str(data.get("topic") or "").strip()
+    if not broker or not topic:
+        return jsonify({"status": "error", "message": "Broker und Topic sind erforderlich."}), 400
+
+    try:
+        port = int(data.get("port") or 1883)
+    except (TypeError, ValueError):
+        port = 1883
+
+    payload = data.get("payload", "")
+    if payload is None:
+        payload = ""
+
+    try:
+        qos = int(data.get("qos") or 0)
+    except (TypeError, ValueError):
+        qos = 0
+    if qos not in (0, 1, 2):
+        qos = 0
+
+    retain = bool(data.get("retain"))
+    username = str(data.get("username") or "").strip() or None
+    password = data.get("password") or None
+    use_tls = bool(data.get("use_tls"))
+
+    auth = {"username": username, "password": password or ""} if username else None
+    tls = {"tls_version": None} if use_tls else None
+
+    try:
+        mqtt_publish.single(
+            topic,
+            payload=payload,
+            qos=qos,
+            retain=retain,
+            hostname=broker,
+            port=port,
+            auth=auth,
+            tls=tls,
+            client_id="netzwerkplan",
+            keepalive=10,
+        )
+    except Exception as exc:  # noqa: BLE001 - Netzwerk-/Broker-Fehler sollen als JSON zurueckkommen
+        return jsonify({"status": "error", "message": str(exc)}), 502
+
     return jsonify({"status": "ok"})
 
 

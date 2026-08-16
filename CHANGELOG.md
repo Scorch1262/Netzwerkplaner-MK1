@@ -2,6 +2,42 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.12.0] – MQTT-Schaltflächen: Nachrichten direkt aus dem Netzwerkplan versenden
+
+- **Neu:** Schaltflächen an Elementen lassen sich jetzt zusätzlich zu
+  Webseiten/RDP/VNC/SSH auch als **MQTT-Aktion** anlegen. Ein Klick
+  versendet dann eine MQTT-Nachricht an einen frei konfigurierbaren
+  Broker – z. B. um über Home Assistant/openHAB/Node-RED angebundene
+  Aktoren direkt aus dem Netzwerkplan zu schalten.
+- **Editor:** Im Element-Dialog gibt es je Schaltfläche jetzt eine
+  Typ-Auswahl **„Link" / „MQTT"**. Bei „MQTT" erscheinen die passenden
+  Felder: Broker-Host/IP, Port (Standard 1883), Topic, Payload/Nachricht,
+  QoS (0/1/2), Retain-Flag, optionaler Benutzername/Passwort sowie ein
+  TLS/SSL-Schalter.
+- **Technisch:** Da Browser aus Sicherheitsgründen kein rohes TCP/MQTT
+  sprechen können, läuft der eigentliche Versand über einen neuen
+  Backend-Endpunkt `POST /api/mqtt-publish` (nutzt `paho-mqtt` für einen
+  einzelnen Connect/Publish/Disconnect-Vorgang je Klick). Funktioniert
+  dadurch mit jedem Standard-MQTT-Broker (z. B. Mosquitto) – auch ohne
+  WebSocket-Unterstützung auf Broker-Seite.
+- MQTT-Buttons sind farblich (grün) und mit eigenem Symbol (📡) von
+  Webseiten-Buttons unterschieden; ein Klick zeigt Erfolg oder
+  Fehlermeldung (z. B. „Broker nicht erreichbar") als deutliche
+  Einblendung an.
+- `requirements.txt` um `paho-mqtt` ergänzt. Fehlt das Paket zur
+  Laufzeit, startet der Server trotzdem – nur der MQTT-Endpunkt liefert
+  dann eine verständliche Fehlermeldung statt eines Absturzes.
+- `config.json`: Jede Schaltfläche hat jetzt optional `action_type`
+  (`"url"` oder `"mqtt"`) sowie bei MQTT ein `mqtt`-Objekt mit den oben
+  genannten Feldern. **Abwärtskompatibel:** Bestehende Einträge ohne
+  `action_type` (auch das ganz alte reine URL-String-Format) werden
+  automatisch als `"url"` behandelt und funktionieren unverändert weiter.
+- Mit einer vollständigen jsdom-Testreihe verifiziert: Editor-Flow
+  (Typ wechseln → Felder ausfüllen → Speichern), korrektes
+  Button-Rendering, korrekt gesendeter Request-Payload, Fehlerbehandlung
+  bei nicht erreichbarem Broker sowie Abwärtskompatibilität zu alten
+  reinen URL-Links.
+
 ## [1.11.2] – URL-Feld im Link-Editor tatsächlich breit (CSS-Spezifitäts-Bug behoben)
 
 - **Ursache gefunden:** Die allgemeine Regel `.modal select { width: 100%; }`

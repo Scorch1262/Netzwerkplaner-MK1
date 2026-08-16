@@ -57,6 +57,21 @@
         {
           "label": "Admin-Konsole",
           "url": "https://192.168.1.10:8443/admin"
+        },
+        {
+          "label": "Backup-Job starten",
+          "action_type": "mqtt",
+          "mqtt": {
+            "broker": "192.168.1.50",
+            "port": 1883,
+            "topic": "server/fileserver/backup/start",
+            "payload": "START",
+            "qos": 1,
+            "retain": false,
+            "username": "",
+            "password": "",
+            "use_tls": false
+          }
         }
       ]
     },
@@ -70,7 +85,11 @@
       "ports": 24,
       "port_side": "bottom",
       "port_mirror": false,
-      "port_names": ["", "Buero 101", "Buero 102"],
+      "port_names": [
+        "",
+        "Buero 101",
+        "Buero 102"
+      ],
       "links": []
     }
   ],

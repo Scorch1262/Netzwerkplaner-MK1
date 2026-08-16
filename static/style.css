@@ -382,6 +382,8 @@ body.use-mode .divider.edit-divider {
   white-space: nowrap;
 }
 .el-link-btn:hover { background: var(--accent-dim); color: #001318; border-color: var(--accent); }
+.el-link-btn-mqtt { color: var(--success); }
+.el-link-btn-mqtt:hover { background: rgba(53,214,143,0.18); color: #eafff5; border-color: var(--success); }
 
 .ports-bar {
   display: flex;
@@ -602,6 +604,8 @@ body.use-mode .divider.edit-divider {
 .modal {
   width: 380px;
   max-width: 90vw;
+  max-height: 88vh;
+  overflow-y: auto;
   background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -815,6 +819,74 @@ body.use-mode .divider.edit-divider {
   font-size: 12px;
 }
 .link-edit-remove:hover { color: var(--danger); border-color: var(--danger); }
+
+.links-edit-list .link-edit-top .link-edit-type {
+  flex: 0 0 76px;
+  min-width: 0;
+  width: 76px;
+  margin-top: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 4px;
+  font-size: 11px;
+  color: var(--text-1);
+  font-family: var(--font-main);
+}
+
+/* --- MQTT-Felder-Block --- */
+.link-edit-mqtt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.link-edit-mqtt-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.link-edit-mqtt input[type="text"],
+.link-edit-mqtt input[type="password"],
+.link-edit-mqtt input[type="number"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  margin-top: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 7px;
+  font-size: 11.5px;
+  color: var(--text-0);
+  font-family: var(--font-mono);
+}
+.link-edit-mqtt input.link-edit-mqtt-port {
+  flex: 0 0 72px;
+}
+.link-edit-mqtt input:focus { outline: none; border-color: var(--accent-2); }
+.link-edit-mqtt select.link-edit-mqtt-qos {
+  flex: 0 0 84px;
+  min-width: 0;
+  width: 84px;
+  margin-top: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 4px;
+  font-size: 11px;
+  color: var(--text-1);
+  font-family: var(--font-mono);
+}
+.link-edit-mqtt-check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-1);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.link-edit-mqtt-check input { flex: 0 0 auto !important; width: auto !important; }
 
 /* Kontextmenue fuer Verbindungen (Doppelklick auf eine Leitung im Bearbeitungsmodus) */
 .conn-ctx-menu {

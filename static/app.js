@@ -538,14 +538,30 @@ function buildElementNode(el) {
     elLinks.forEach((link, i) => {
       const btn = document.createElement("button");
       btn.className = "el-link-btn";
-      btn.textContent = getLinkIcon(link.url) + " " + (link.label || "Webseite " + (i + 1));
-      btn.title = getLinkScheme(link.url) === "rdp"
-        ? link.url + " – laedt eine .rdp-Datei herunter (Windows-Remotedesktopverbindung)"
-        : link.url;
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openLink(link.url);
-      });
+      const isMqtt = link.action_type === "mqtt";
+
+      if (isMqtt) {
+        btn.classList.add("el-link-btn-mqtt");
+        btn.textContent = "📡 " + (link.label || "MQTT " + (i + 1));
+        const m = link.mqtt || {};
+        btn.title = "MQTT: " + (m.broker || "?") + ":" + (m.port || 1883) +
+          " → Topic „" + (m.topic || "") + "“" +
+          (m.payload ? " = „" + m.payload + "“" : "");
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          publishMqttMessage(link.mqtt, link.label);
+        });
+      } else {
+        btn.textContent = getLinkIcon(link.url) + " " + (link.label || "Webseite " + (i + 1));
+        btn.title = getLinkScheme(link.url) === "rdp"
+          ? link.url + " – laedt eine .rdp-Datei herunter (Windows-Remotedesktopverbindung)"
+          : link.url;
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          openLink(link.url);
+        });
+      }
+
       linksWrap.appendChild(btn);
     });
     body.appendChild(linksWrap);
@@ -744,15 +760,53 @@ function escapeHtml(str) {
    { label, url } um. Unterstuetzt sowohl das alte Format (Array aus
    reinen URL-Strings) als auch das neue Format, damit bestehende
    config.json-Dateien weiterhin funktionieren. */
+/* Wandelt die Links/Schaltflaechen eines Elements in ein einheitliches
+   Format { label, action_type, url, mqtt } um. Unterstuetzt:
+   - das ganz alte Format (Array aus reinen URL-Strings)
+   - das bisherige Objekt-Format { label, url }
+   - das neue Format mit action_type "url" ODER "mqtt" (inkl. mqtt-Objekt)
+   Damit bleiben bestehende config.json-Dateien aus allen Versionen
+   funktionsfaehig. */
 function normalizeLinks(links) {
   if (!Array.isArray(links)) return [];
   return links
     .map((l) => {
-      if (typeof l === "string") return { label: "", url: l.trim() };
-      if (l && typeof l === "object") return { label: (l.label || "").trim(), url: (l.url || "").trim() };
-      return null;
+      if (typeof l === "string") {
+        const url = l.trim();
+        return url ? { label: "", action_type: "url", url, mqtt: null } : null;
+      }
+      if (!l || typeof l !== "object") return null;
+
+      if (l.action_type === "mqtt") {
+        const m = l.mqtt && typeof l.mqtt === "object" ? l.mqtt : {};
+        const topic = String(m.topic || "").trim();
+        if (!topic) return null;
+        let qos = parseInt(m.qos, 10);
+        if (![0, 1, 2].includes(qos)) qos = 0;
+        let port = parseInt(m.port, 10);
+        if (!Number.isFinite(port) || port <= 0) port = 1883;
+        return {
+          label: (l.label || "").trim(),
+          action_type: "mqtt",
+          url: "",
+          mqtt: {
+            broker: String(m.broker || "").trim(),
+            port,
+            topic,
+            payload: m.payload !== undefined && m.payload !== null ? String(m.payload) : "",
+            qos,
+            retain: !!m.retain,
+            username: String(m.username || "").trim(),
+            password: m.password || "",
+            use_tls: !!m.use_tls,
+          },
+        };
+      }
+
+      const url = (l.url || "").trim();
+      return url ? { label: (l.label || "").trim(), action_type: "url", url, mqtt: null } : null;
     })
-    .filter((l) => l && l.url);
+    .filter(Boolean);
 }
 
 /* Ermittelt das URL-Schema (http, https, rdp, vnc, ssh, ...) einer Adresse. */
@@ -843,15 +897,50 @@ function downloadRdpFile(url) {
   );
 }
 
-function getElementHost(el) {
-  const first = normalizeLinks(el.links)[0];
-  if (!first) return "";
-  try {
-    return new URL(first.url).hostname;
-  } catch (e) {
-    const m = first.url.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/([^/:?#]+)/) || first.url.match(/^([^/:?#\s]+)/);
-    return m ? m[1] : "";
+/* Versendet eine MQTT-Nachricht ueber den Backend-Proxy-Endpunkt
+   (/api/mqtt-publish), da Browser aus Sicherheitsgruenden kein rohes
+   TCP/MQTT sprechen koennen. Zeigt den Erfolg/Fehler als Toast an. */
+async function publishMqttMessage(mqttConfig, label) {
+  const m = mqttConfig || {};
+  const name = label || m.topic || "MQTT";
+  if (!m.broker || !m.topic) {
+    showToast("⚠ MQTT-Konfiguration unvollständig (Broker/Topic fehlt) – „" + name + "“.", 5000);
+    return;
   }
+  showToast("📡 Sende MQTT-Nachricht „" + name + "“ an " + m.topic + " …", 3000);
+  try {
+    const res = await fetch("/api/mqtt-publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(m),
+    });
+    let data = {};
+    try { data = await res.json(); } catch (e) { /* keine JSON-Antwort */ }
+    if (res.ok && data.status === "ok") {
+      showToast("✅ MQTT gesendet: " + m.topic + (m.payload ? " = „" + m.payload + "“" : ""), 4000);
+    } else {
+      showToast("❌ MQTT-Fehler: " + (data.message || res.statusText || "Unbekannter Fehler"), 7000);
+    }
+  } catch (e) {
+    showToast("❌ MQTT-Fehler: " + e.message, 7000);
+  }
+}
+
+function getElementHost(el) {
+  const links = normalizeLinks(el.links);
+  for (const l of links) {
+    if (l.action_type === "mqtt") {
+      if (l.mqtt && l.mqtt.broker) return l.mqtt.broker;
+      continue;
+    }
+    try {
+      return new URL(l.url).hostname;
+    } catch (e) {
+      const m = l.url.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/([^/:?#]+)/) || l.url.match(/^([^/:?#\s]+)/);
+      if (m) return m[1];
+    }
+  }
+  return "";
 }
 
 /* ------------------------------------------------------------------ */
@@ -1082,14 +1171,138 @@ $("#fPorts").addEventListener("input", () => {
 
 let pendingLinks = []; // [{label, url}, ...]
 
+function mkTextInput(type, cls, placeholder, value) {
+  const inp = document.createElement("input");
+  inp.type = type;
+  inp.className = cls;
+  inp.placeholder = placeholder;
+  if (value !== undefined && value !== null && value !== "") inp.value = value;
+  return inp;
+}
+
+function buildUrlFieldsBlock(link, i) {
+  const bottomRow = document.createElement("div");
+  bottomRow.className = "link-edit-bottom";
+
+  const urlInput = mkTextInput("text", "link-edit-url", "https://192.168.1.2/admin", link.url);
+  urlInput.addEventListener("input", () => { pendingLinks[i].url = urlInput.value; });
+
+  const schemeSelect = document.createElement("select");
+  schemeSelect.className = "link-edit-scheme";
+  schemeSelect.title = "Protokoll-Schnellauswahl";
+  [
+    { value: "https://", text: "Web" },
+    { value: "rdp://", text: "RDP" },
+    { value: "vnc://", text: "VNC" },
+    { value: "ssh://", text: "SSH" },
+    { value: "", text: "…" },
+  ].forEach((opt) => {
+    const o = document.createElement("option");
+    o.value = opt.value;
+    o.textContent = opt.text;
+    schemeSelect.appendChild(o);
+  });
+  const currentScheme = (link.url || "").match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//);
+  schemeSelect.value = currentScheme ? currentScheme[0] : "";
+  schemeSelect.addEventListener("change", () => {
+    if (!schemeSelect.value) return;
+    const withoutScheme = (urlInput.value || "").replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, "");
+    urlInput.value = schemeSelect.value + withoutScheme;
+    pendingLinks[i].url = urlInput.value;
+    urlInput.focus();
+  });
+
+  bottomRow.appendChild(schemeSelect);
+  bottomRow.appendChild(urlInput);
+  return bottomRow;
+}
+
+function buildMqttFieldsBlock(link, i) {
+  const wrap = document.createElement("div");
+  wrap.className = "link-edit-mqtt";
+  const m = pendingLinks[i].mqtt;
+
+  const row1 = document.createElement("div");
+  row1.className = "link-edit-mqtt-row";
+  const brokerInput = mkTextInput("text", "link-edit-mqtt-broker", "Broker-IP / Host (z. B. 192.168.1.50)", m.broker);
+  brokerInput.addEventListener("input", () => { m.broker = brokerInput.value; });
+  const portInput = mkTextInput("number", "link-edit-mqtt-port", "1883", m.port);
+  portInput.addEventListener("input", () => { m.port = parseInt(portInput.value, 10) || 1883; });
+  row1.appendChild(brokerInput);
+  row1.appendChild(portInput);
+
+  const topicInput = mkTextInput("text", "link-edit-mqtt-topic", "Topic (z. B. haus/wohnzimmer/licht)", m.topic);
+  topicInput.addEventListener("input", () => { m.topic = topicInput.value; });
+
+  const payloadInput = mkTextInput("text", "link-edit-mqtt-payload", "Nachricht / Payload (z. B. ON)", m.payload);
+  payloadInput.addEventListener("input", () => { m.payload = payloadInput.value; });
+
+  const row2 = document.createElement("div");
+  row2.className = "link-edit-mqtt-row";
+  const qosSelect = document.createElement("select");
+  qosSelect.className = "link-edit-mqtt-qos";
+  qosSelect.title = "Quality of Service";
+  [0, 1, 2].forEach((q) => {
+    const o = document.createElement("option");
+    o.value = String(q);
+    o.textContent = "QoS " + q;
+    qosSelect.appendChild(o);
+  });
+  qosSelect.value = String(m.qos || 0);
+  qosSelect.addEventListener("change", () => { m.qos = parseInt(qosSelect.value, 10); });
+
+  const retainLabel = document.createElement("label");
+  retainLabel.className = "link-edit-mqtt-check";
+  const retainCb = document.createElement("input");
+  retainCb.type = "checkbox";
+  retainCb.checked = !!m.retain;
+  retainCb.addEventListener("change", () => { m.retain = retainCb.checked; });
+  retainLabel.appendChild(retainCb);
+  retainLabel.appendChild(document.createTextNode(" Retain"));
+
+  row2.appendChild(qosSelect);
+  row2.appendChild(retainLabel);
+
+  const row3 = document.createElement("div");
+  row3.className = "link-edit-mqtt-row";
+  const userInput = mkTextInput("text", "link-edit-mqtt-user", "Benutzername (optional)", m.username);
+  userInput.addEventListener("input", () => { m.username = userInput.value; });
+  const passInput = mkTextInput("password", "link-edit-mqtt-pass", "Passwort (optional)", m.password);
+  passInput.addEventListener("input", () => { m.password = passInput.value; });
+  row3.appendChild(userInput);
+  row3.appendChild(passInput);
+
+  const tlsLabel = document.createElement("label");
+  tlsLabel.className = "link-edit-mqtt-check";
+  const tlsCb = document.createElement("input");
+  tlsCb.type = "checkbox";
+  tlsCb.checked = !!m.use_tls;
+  tlsCb.addEventListener("change", () => { m.use_tls = tlsCb.checked; });
+  tlsLabel.appendChild(tlsCb);
+  tlsLabel.appendChild(document.createTextNode(" TLS/SSL verwenden"));
+
+  wrap.appendChild(row1);
+  wrap.appendChild(topicInput);
+  wrap.appendChild(payloadInput);
+  wrap.appendChild(row2);
+  wrap.appendChild(row3);
+  wrap.appendChild(tlsLabel);
+  return wrap;
+}
+
 function renderLinksEditor() {
   const list = $("#fLinksList");
   list.innerHTML = "";
   pendingLinks.forEach((link, i) => {
+    if (!link.action_type) link.action_type = "url";
+    if (!link.mqtt) {
+      link.mqtt = { broker: "", port: 1883, topic: "", payload: "", qos: 0, retain: false, username: "", password: "", use_tls: false };
+    }
+
     const row = document.createElement("div");
     row.className = "link-edit-row";
 
-    // --- Obere Zeile: Bezeichnung + Entfernen-Button ---
+    // --- Obere Zeile: Bezeichnung + Typ (Link/MQTT) + Entfernen-Button ---
     const topRow = document.createElement("div");
     topRow.className = "link-edit-top";
 
@@ -1097,14 +1310,32 @@ function renderLinksEditor() {
     labelInput.type = "text";
     labelInput.className = "link-edit-label";
     labelInput.maxLength = 40;
-    labelInput.placeholder = "Bezeichnung (z. B. Admin, Grafana, Remotedesktop)";
+    labelInput.placeholder = "Bezeichnung (z. B. Admin, Grafana, Licht an)";
     labelInput.value = link.label || "";
     labelInput.addEventListener("input", () => { pendingLinks[i].label = labelInput.value; });
+
+    const typeSelect = document.createElement("select");
+    typeSelect.className = "link-edit-type";
+    typeSelect.title = "Aktionstyp der Schaltflaeche";
+    [
+      { value: "url", text: "Link" },
+      { value: "mqtt", text: "MQTT" },
+    ].forEach((opt) => {
+      const o = document.createElement("option");
+      o.value = opt.value;
+      o.textContent = opt.text;
+      typeSelect.appendChild(o);
+    });
+    typeSelect.value = link.action_type;
+    typeSelect.addEventListener("change", () => {
+      pendingLinks[i].action_type = typeSelect.value;
+      renderLinksEditor();
+    });
 
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
     removeBtn.className = "link-edit-remove";
-    removeBtn.title = "Diese Webseite entfernen";
+    removeBtn.title = "Diese Schaltflaeche entfernen";
     removeBtn.textContent = "✕";
     removeBtn.addEventListener("click", () => {
       pendingLinks.splice(i, 1);
@@ -1112,49 +1343,17 @@ function renderLinksEditor() {
     });
 
     topRow.appendChild(labelInput);
+    topRow.appendChild(typeSelect);
     topRow.appendChild(removeBtn);
-
-    // --- Untere Zeile: Protokoll-Auswahl + URL (bekommt den meisten Platz) ---
-    const bottomRow = document.createElement("div");
-    bottomRow.className = "link-edit-bottom";
-
-    const urlInput = document.createElement("input");
-    urlInput.type = "text";
-    urlInput.className = "link-edit-url";
-    urlInput.placeholder = "https://192.168.1.2/admin";
-    urlInput.value = link.url || "";
-    urlInput.addEventListener("input", () => { pendingLinks[i].url = urlInput.value; });
-
-    const schemeSelect = document.createElement("select");
-    schemeSelect.className = "link-edit-scheme";
-    schemeSelect.title = "Protokoll-Schnellauswahl";
-    [
-      { value: "https://", text: "Web" },
-      { value: "rdp://", text: "RDP" },
-      { value: "vnc://", text: "VNC" },
-      { value: "ssh://", text: "SSH" },
-      { value: "", text: "…" },
-    ].forEach((opt) => {
-      const o = document.createElement("option");
-      o.value = opt.value;
-      o.textContent = opt.text;
-      schemeSelect.appendChild(o);
-    });
-    const currentScheme = (link.url || "").match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//);
-    schemeSelect.value = currentScheme ? currentScheme[0] : "";
-    schemeSelect.addEventListener("change", () => {
-      if (!schemeSelect.value) return;
-      const withoutScheme = (urlInput.value || "").replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, "");
-      urlInput.value = schemeSelect.value + withoutScheme;
-      pendingLinks[i].url = urlInput.value;
-      urlInput.focus();
-    });
-
-    bottomRow.appendChild(schemeSelect);
-    bottomRow.appendChild(urlInput);
-
     row.appendChild(topRow);
-    row.appendChild(bottomRow);
+
+    // --- Untere Zeile(n): abhaengig vom Aktionstyp ---
+    if (link.action_type === "mqtt") {
+      row.appendChild(buildMqttFieldsBlock(link, i));
+    } else {
+      row.appendChild(buildUrlFieldsBlock(link, i));
+    }
+
     list.appendChild(row);
   });
 }
@@ -1196,8 +1395,34 @@ $("#fSave").addEventListener("click", () => {
   el.location = $("#fLocation").value.trim();
   el.type = $("#fType").value;
   el.links = pendingLinks
-    .map((l) => ({ label: (l.label || "").trim(), url: (l.url || "").trim() }))
-    .filter((l) => l.url);
+    .map((l) => {
+      if (l.action_type === "mqtt") {
+        const m = l.mqtt || {};
+        const topic = (m.topic || "").trim();
+        const broker = (m.broker || "").trim();
+        if (!topic || !broker) return null; // unvollstaendige MQTT-Eintraege verwerfen
+        let port = parseInt(m.port, 10);
+        if (!Number.isFinite(port) || port <= 0) port = 1883;
+        let qos = parseInt(m.qos, 10);
+        if (![0, 1, 2].includes(qos)) qos = 0;
+        return {
+          label: (l.label || "").trim(),
+          action_type: "mqtt",
+          mqtt: {
+            broker, port, topic,
+            payload: m.payload || "",
+            qos,
+            retain: !!m.retain,
+            username: (m.username || "").trim(),
+            password: m.password || "",
+            use_tls: !!m.use_tls,
+          },
+        };
+      }
+      const url = (l.url || "").trim();
+      return url ? { label: (l.label || "").trim(), action_type: "url", url } : null;
+    })
+    .filter(Boolean);
 
   if (hasPorts(el.type)) {
     let n = parseInt($("#fPorts").value, 10);

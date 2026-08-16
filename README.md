@@ -2,8 +2,7 @@
 
 ![Bild](Unbenannt.PNG)
 
-
-**Aktuelle Version: 1.11.2** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.12.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -24,11 +23,16 @@ entspricht:
 
 ```bash
 pip install Flask==3.0.3
+pip install paho-mqtt==2.1.0
 pip install pyinstaller==6.10.0
 ```
 
 - **Flask** – der Webserver, der die Oberfläche ausliefert und die
   Konfiguration per REST-API speichert/lädt.
+- **paho-mqtt** – wird für MQTT-Schaltflächen benötigt (versendet die
+  Nachricht serverseitig an den konfigurierten Broker). Fehlt das Paket,
+  startet der Server trotzdem – nur MQTT-Schaltflächen funktionieren
+  dann nicht.
 - **PyInstaller** – zum Erzeugen der eigenständigen `.exe`.
 
 Alles andere (HTML/CSS/JS) läuft im Browser des Nutzers, es sind keine
@@ -221,6 +225,12 @@ solange gültiges JSON erhalten bleibt.
   Klick auf eine RDP-Schaltfläche lädt eine `.rdp`-Datei mit der
   passenden Ziel-IP herunter; deren Öffnen startet die Windows-
   Remotedesktopverbindung automatisch mit vorausgefüllter Adresse.
+- **MQTT-Schaltflächen:** Über die Typ-Auswahl „Link"/„MQTT" je
+  Webseite lässt sich stattdessen eine MQTT-Nachricht konfigurieren
+  (Broker, Port, Topic, Payload, QoS, Retain, optional Zugangsdaten/TLS).
+  Ein Klick auf die Schaltfläche (📡, grün) versendet die Nachricht
+  serverseitig an den Broker – z. B. um Smart-Home-Aktoren zu schalten.
+  Erfolg/Fehler werden als Einblendung angezeigt.
 - **Nutzungsmodus**: Keine Änderungen möglich, es können ausschließlich
   über die Webseiten-Schaltflächen auf jedem Element die hinterlegten
   Seiten geöffnet werden. Ein Klick auf eine Leitung hebt sie vollständig
