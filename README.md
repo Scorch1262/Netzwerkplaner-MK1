@@ -2,7 +2,7 @@
 
 ![Bild](Unbenannt.PNG)
 
-**Aktuelle Version: 1.13.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.13.1** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
@@ -131,23 +131,26 @@ Im Projektordner (dort, wo `app.py` liegt) folgenden Befehl ausführen:
 **Windows (cmd/PowerShell):**
 
 ```bash
-pyinstaller --onefile --name Netzwerkplan --add-data "templates;templates" --add-data "static;static" app.py
+pyinstaller --onefile --name Netzwerkplan --add-data "templates;templates" --add-data "static;static" --add-data "VERSION;." app.py
 ```
 
 **macOS/Linux** (Trennzeichen `:` statt `;`):
 
 ```bash
-pyinstaller --onefile --name Netzwerkplan --add-data "templates:templates" --add-data "static:static" app.py
+pyinstaller --onefile --name Netzwerkplan --add-data "templates:templates" --add-data "static:static" --add-data "VERSION:." app.py
 ```
 
 Optional ohne Konsolenfenster (Windows, `pythonw`-Stil, IP/Status werden dann
 nicht angezeigt – daher nur empfohlen, wenn das nicht benötigt wird):
 
 ```bash
-pyinstaller --onefile --noconsole --name Netzwerkplan --add-data "templates;templates" --add-data "static;static" app.py
+pyinstaller --onefile --noconsole --name Netzwerkplan --add-data "templates;templates" --add-data "static;static" --add-data "VERSION;." app.py
 ```
 
-Nach dem Build liegt die fertige Datei unter `dist/Netzwerkplan.exe`.
+Nach dem Build liegt die fertige Datei unter `dist/Netzwerkplan.exe`. Die
+`--add-data "VERSION;."`-Option bettet die Versionsnummer in die exe ein,
+damit sie in der Weboberfläche (Kopfzeile und Statusleiste) angezeigt werden
+kann.
 
 ## 5. Wichtig: config.json neben die exe legen
 

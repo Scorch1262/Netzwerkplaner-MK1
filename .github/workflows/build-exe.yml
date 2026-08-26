@@ -49,6 +49,7 @@ jobs:
           pyinstaller --onefile --name Netzwerkplan
           --add-data "templates${{ matrix.add_data_sep }}templates"
           --add-data "static${{ matrix.add_data_sep }}static"
+          --add-data "VERSION${{ matrix.add_data_sep }}."
           app.py
 
       - name: Ausfuehrbare Rechte setzen (macOS)
@@ -61,12 +62,14 @@ jobs:
         run: |
           Copy-Item -Path "config.json" -Destination "dist\config.json"
           Copy-Item -Path "README.md" -Destination "dist\README.md"
+          Copy-Item -Path "VERSION" -Destination "dist\VERSION"
 
       - name: Standard-config.json und README der Ausgabe beilegen (macOS)
         if: matrix.os == 'macos-latest'
         run: |
           cp config.json dist/config.json
           cp README.md dist/README.md
+          cp VERSION dist/VERSION
 
       - name: Build als Artefakt hochladen
         uses: actions/upload-artifact@v4
@@ -76,11 +79,13 @@ jobs:
             dist/${{ matrix.output_name }}
             dist/config.json
             dist/README.md
+            dist/VERSION
           if-no-files-found: error
 
   # Nur bei Tag-Push (z. B. v1.0.0): wartet auf beide Builds und erstellt EIN
   # gemeinsames GitHub Release mit der Windows-exe, der macOS-Datei sowie
-  # config.json/README.md (jeweils nur einmal, um Namenskonflikte zu vermeiden).
+  # config.json/README.md/VERSION (jeweils nur einmal, um Namenskonflikte
+  # zu vermeiden).
   release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
@@ -106,6 +111,7 @@ jobs:
           chmod +x release/Netzwerkplan-macOS
           cp dl/windows/config.json release/config.json
           cp dl/windows/README.md release/README.md
+          cp dl/windows/VERSION release/VERSION
 
       - name: GitHub Release erstellen
         uses: softprops/action-gh-release@v2
@@ -115,5 +121,6 @@ jobs:
             release/Netzwerkplan-macOS
             release/config.json
             release/README.md
+            release/VERSION
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

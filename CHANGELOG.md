@@ -2,6 +2,26 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.13.1] – Versionsnummer wird auf der Weboberfläche angezeigt
+
+- **Neu:** Die aktuelle Softwareversion wird jetzt direkt auf der
+  Weboberfläche angezeigt – dezent in der Kopfzeile neben dem Logo
+  (z. B. „v1.13.1") sowie zusätzlich in der Statusleiste unten rechts.
+- Die Version wird beim Seitenaufruf serverseitig aus der `VERSION`-Datei
+  gelesen (`get_version()` in `app.py`) und ins HTML eingebettet – kein
+  zusätzlicher Request nötig. Fehlt die Datei ausnahmsweise, wird
+  „unbekannt" angezeigt statt eines Fehlers.
+- Auch der Server-Start-Banner in der Konsole zeigt jetzt die Version an.
+- **Wichtig für den Build:** `VERSION` wird jetzt zusätzlich per
+  `--add-data` in die PyInstaller-exe eingebettet (Windows- und
+  macOS-Workflow sowie die manuellen Build-Befehle im README wurden
+  entsprechend angepasst), damit die Anzeige auch in der gepackten
+  Anwendung funktioniert. `VERSION` liegt außerdem weiterhin als
+  sichtbare Begleitdatei neben der exe (wie `config.json`/`README.md`).
+- Verifiziert sowohl im normalen Entwicklungsmodus als auch in einem
+  simulierten PyInstaller-Bundle-Szenario (`sys.frozen`/`_MEIPASS`).
+- Keine Änderung am `config.json`-Datenformat.
+
 ## [1.13.0] – Windows/macOS-Kompatibilität, einheitliches Kontextmenü, Hervorhebung nur im Nutzungsmodus, NAS
 
 - **Behoben – macOS öffnet jetzt auch Windows-`config.json`-Dateien:**

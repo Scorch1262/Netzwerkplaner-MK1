@@ -115,6 +115,28 @@ def save_config(data):
     os.replace(tmp_path, CONFIG_PATH)
 
 
+def get_version():
+    """Liest die Versionsnummer aus der VERSION-Datei. Sucht an mehreren
+    moeglichen Orten, damit es sowohl im Quellverzeichnis (python app.py)
+    als auch in der per PyInstaller gebuendelten exe funktioniert."""
+    candidates = [
+        os.path.join(RES_DIR, "VERSION"),   # in die exe gebuendelt (--add-data)
+        os.path.join(BASE_DIR, "VERSION"),  # liegt neben der exe/dem Skript
+    ]
+    for path in candidates:
+        try:
+            with open(path, "r", encoding="utf-8-sig") as f:
+                version = f.read().strip()
+                if version:
+                    return version
+        except OSError:
+            continue
+    return "unbekannt"
+
+
+VERSION = get_version()
+
+
 # --------------------------------------------------------------------------
 # Flask-App
 # --------------------------------------------------------------------------
@@ -128,7 +150,7 @@ app = Flask(
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", version=VERSION)
 
 
 @app.route("/api/config", methods=["GET"])
@@ -242,7 +264,7 @@ def main():
     local_ip = get_local_ip()
 
     print("=" * 64)
-    print(" NETZWERKPLAN-SERVER")
+    print(f" NETZWERKPLAN-SERVER  (Version {VERSION})")
     print("=" * 64)
     print(f" Lokal:          http://127.0.0.1:{port}")
     print(f" Im Netzwerk:    http://{local_ip}:{port}")

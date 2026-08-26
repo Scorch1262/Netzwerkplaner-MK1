@@ -13,6 +13,7 @@
     <div class="brand">
       <span class="brand-mark">◈</span>
       <span class="brand-text">NETZWERKPLAN</span>
+      <span class="brand-version" title="Version der Software">v{{ version }}</span>
     </div>
 
     <div class="toolbar">
@@ -62,7 +63,10 @@
 
   <div id="statusbar">
     <span id="statusText">Bereit</span>
-    <span id="ipText"></span>
+    <span class="statusbar-right">
+      <span id="ipText"></span>
+      <span id="versionText" title="Version der Software">v{{ version }}</span>
+    </span>
   </div>
 </div>
 
