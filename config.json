@@ -91,6 +91,21 @@
         "Buero 102"
       ],
       "links": []
+    },
+    {
+      "id": "el-nas-1",
+      "type": "nas",
+      "name": "Backup-NAS",
+      "location": "Serverraum EG, Rack 2",
+      "x": 950,
+      "y": 320,
+      "links": [
+        {
+          "label": "Web-Oberflaeche",
+          "action_type": "url",
+          "url": "https://192.168.1.20"
+        }
+      ]
     }
   ],
   "connections": [

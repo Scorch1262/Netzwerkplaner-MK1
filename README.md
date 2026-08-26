@@ -2,11 +2,11 @@
 
 ![Bild](Unbenannt.PNG)
 
-**Aktuelle Version: 1.12.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
+**Aktuelle Version: 1.13.0** – siehe [CHANGELOG.md](CHANGELOG.md) für alle
 Änderungen.
 
 Ein lokal laufender Webserver, der einen interaktiven Netzwerkplan bereitstellt
-(frei platzierbare Elemente wie Switches, Router, Server, PCs, Raspberry Pis,
+(frei platzierbare Elemente wie Switches, Router, Server, NAS, PCs, Raspberry Pis,
 Kameras, Patchfelder usw., verbunden durch farbige Linien). Erreichbar unter
 der IP des Rechners im lokalen Netzwerk. Dark-Theme im Stil von
 Anduril Lattice, Verbindungslinien im Stil von harness.design.
@@ -197,18 +197,17 @@ solange gültiges JSON erhalten bleibt.
   Bezeichnungs-Position) werden dabei exakt mitverschoben, sodass ihre
   Form erhalten bleibt. Klick auf leere Fläche ohne Shift oder Escape
   hebt die Auswahl wieder auf.
-- **Hervorhebung nach Standort:** Klick auf die Standort-Angabe eines
-  Elements hebt – wie bei Leitungen – alle Elemente mit demselben
-  Standort hervor und dimmt die übrigen ab. Erneuter Klick, Klick auf
-  leere Fläche oder Escape heben die Hervorhebung wieder auf
-  (funktioniert im Bearbeitungs- und im Nutzungsmodus).
-- **Leitungen bearbeiten:** Jede Leitung zeigt im Bearbeitungsmodus einen
-  eigenen „✎"-Button (wie an den Elementen), der ein Menü öffnet, um die
-  Bezeichnung zu ändern, die Farbe anzupassen, einen Wegpunkt an dieser
-  Stelle einzufügen oder die Leitung einzeln zu entfernen. Ein Klick auf
-  die Leitung selbst öffnet direkt den vollständigen Dialog mit
-  zusätzlicher Einstellung für die Leitungsstärke und „Linie zurücksetzen"
-  (entfernt alle Wegpunkte auf einmal).
+- **Hervorhebung nach Standort:** Im Nutzungsmodus hebt ein Klick auf die
+  Standort-Angabe eines Elements – wie bei Leitungen – alle Elemente mit
+  demselben Standort hervor und dimmt die übrigen ab. Erneuter Klick,
+  Klick auf leere Fläche oder Escape heben die Hervorhebung wieder auf.
+  Im Bearbeitungsmodus ist die Standort-Angabe nicht klickbar.
+- **Leitungen bearbeiten:** Ein Klick auf eine Leitung (an beliebiger
+  Stelle) oder auf den eigenen „✎"-Button an der Leitung öffnet im
+  Bearbeitungsmodus **dasselbe** Kontextmenü direkt an der Klickposition:
+  Bezeichnung ändern, Farbe anpassen, Stärke einstellen, Wegpunkt an
+  dieser Stelle einfügen, alle Wegpunkte zurücksetzen oder die Leitung
+  entfernen.
 - **Leitungen umlegen:** Über „+ Wegpunkt hier" im Kontextmenü lassen sich
   frei verschiebbare Wegpunkte setzen, um die Leitung gezielt um andere
   Elemente herumzuführen (weiche, fließende Kurve). Jeder Wegpunkt hat

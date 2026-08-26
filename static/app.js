@@ -7,6 +7,7 @@ const ELEMENT_TYPES = {
   router:      { label: "Router",        icon: "⇋",  color: "#ff8a3d" },
   switch:      { label: "Switch",        icon: "⇄",  color: "#3ad6ff" },
   server:      { label: "Server",        icon: "▤",  color: "#35d68f" },
+  nas:         { label: "NAS",           icon: "🗄",  color: "#b98bff" },
   pc:          { label: "PC",            icon: "🖥",  color: "#e8edf4" },
   laptop:      { label: "Laptop",        icon: "💻", color: "#e8edf4" },
   raspberry_pi:{ label: "Raspberry Pi",  icon: "◍",  color: "#ff4d5e" },
@@ -90,7 +91,6 @@ let draggingWaypoint = null; // { connId, index } | null
 let draggingLabel = null; // { connId } | null
 let connectMode = false, connectFrom = null; // connectFrom = { id, port } | { id, port: null }
 let editingElementId = null;
-let editingConnId = null;
 let selectedColor = CONNECTION_COLORS[0];
 
 /* Relative Position jedes Ports innerhalb seines Elements (in Canvas-Pixeln,
@@ -122,7 +122,6 @@ async function init() {
   $("#chkSnap").checked = config.view?.snap_to_grid ?? true;
 
   buildPalette();
-  buildColorRow();
   buildTypeSelect();
   applyMode();
   applyTransform();
@@ -161,29 +160,6 @@ function buildTypeSelect() {
     sel.appendChild(opt);
   }
 }
-
-function buildColorRow() {
-  const row = $("#colorRow");
-  row.innerHTML = "";
-  for (const color of CONNECTION_COLORS) {
-    const sw = document.createElement("div");
-    sw.className = "color-swatch";
-    sw.style.background = color;
-    sw.dataset.color = color;
-    sw.addEventListener("click", () => {
-      selectedColor = color;
-      $$(".color-swatch").forEach((s) => s.classList.remove("selected"));
-      sw.classList.add("selected");
-      $("#cColorPicker").value = color;
-    });
-    row.appendChild(sw);
-  }
-}
-
-$("#cColorPicker").addEventListener("input", (e) => {
-  selectedColor = e.target.value;
-  $$(".color-swatch").forEach((s) => s.classList.remove("selected"));
-});
 
 /* ------------------------------------------------------------------ */
 /* Modus: Bearbeitung <-> Nutzung                                      */
@@ -520,7 +496,7 @@ function buildElementNode(el) {
   `;
   node.appendChild(body);
 
-  if (el.location) {
+  if (el.location && mode === "use") {
     const locationEl = body.querySelector(".el-location");
     locationEl.classList.add("el-location-clickable");
     locationEl.title = "Klick: alle Elemente am Standort „" + el.location + "\" hervorheben";
@@ -1571,12 +1547,14 @@ function renderConnections() {
 
     if (mode === "edit") {
       const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
-      title.textContent = "Klick (an beliebiger Stelle der Leitung): Details bearbeiten (Staerke, Wegpunkte zuruecksetzen, Loeschen)";
+      title.textContent = "Klick (an beliebiger Stelle der Leitung): Bearbeiten (Name, Farbe, Stärke, Wegpunkt, Entfernen)";
       hitbox.appendChild(title);
 
-      hitbox.addEventListener("click", () => {
+      hitbox.addEventListener("click", (e) => {
         if (connectMode) return;
-        openConnModal(conn.id);
+        e.stopPropagation();
+        const pt = clientToCanvas(e.clientX, e.clientY);
+        openConnContextMenu(conn, pt, e.clientX, e.clientY);
       });
     } else {
       const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
@@ -1907,6 +1885,26 @@ function openConnContextMenu(conn, canvasPoint, clientX, clientY) {
   });
   colorRow.appendChild(colorInput);
 
+  // --- Staerke ---
+  const thicknessLabel = document.createElement("div");
+  thicknessLabel.className = "ctx-menu-label";
+  const thicknessValueSpan = document.createElement("span");
+  thicknessValueSpan.textContent = String(conn.thickness || 4);
+  thicknessLabel.textContent = "Stärke: ";
+  thicknessLabel.appendChild(thicknessValueSpan);
+  thicknessLabel.appendChild(document.createTextNode(" px"));
+  const thicknessInput = document.createElement("input");
+  thicknessInput.type = "range";
+  thicknessInput.min = "2";
+  thicknessInput.max = "14";
+  thicknessInput.className = "ctx-thickness-input";
+  thicknessInput.value = String(conn.thickness || 4);
+  thicknessInput.addEventListener("input", () => {
+    conn.thickness = parseInt(thicknessInput.value, 10);
+    thicknessValueSpan.textContent = thicknessInput.value;
+    renderConnectionsPreserving(menu);
+  });
+
   // --- Aktionen ---
   const actions = document.createElement("div");
   actions.className = "ctx-actions";
@@ -1928,6 +1926,16 @@ function openConnContextMenu(conn, canvasPoint, clientX, clientY) {
     closeConnContextMenu();
   });
 
+  const resetBtn = document.createElement("button");
+  resetBtn.className = "btn ctx-btn";
+  resetBtn.type = "button";
+  resetBtn.textContent = "Linie zurücksetzen";
+  resetBtn.title = "Entfernt alle manuell gesetzten Wegpunkte (automatisches Routing)";
+  resetBtn.addEventListener("click", () => {
+    conn.waypoints = [];
+    closeConnContextMenu();
+  });
+
   const deleteBtn = document.createElement("button");
   deleteBtn.className = "btn btn-danger ctx-btn";
   deleteBtn.type = "button";
@@ -1941,17 +1949,20 @@ function openConnContextMenu(conn, canvasPoint, clientX, clientY) {
   });
 
   actions.appendChild(waypointBtn);
+  actions.appendChild(resetBtn);
   actions.appendChild(deleteBtn);
 
   menu.appendChild(nameLabel);
   menu.appendChild(nameInput);
   menu.appendChild(colorLabel);
   menu.appendChild(colorRow);
+  menu.appendChild(thicknessLabel);
+  menu.appendChild(thicknessInput);
   menu.appendChild(actions);
   document.body.appendChild(menu);
 
   // Position an der Klickstelle, an den Bildschirmrand geklemmt
-  const menuWidth = 220;
+  const menuWidth = 230;
   const vw = window.innerWidth, vh = window.innerHeight;
   const menuHeight = menu.offsetHeight || 160;
   const left = Math.min(Math.max(8, clientX - menuWidth / 2), vw - menuWidth - 8);
@@ -2050,55 +2061,6 @@ function connectionEndpoint(el, portIndex, portSide) {
 /* Geschwungene, dicke Verbindungslinien im Stil von harness.design –
    siehe buildSmoothPath() weiter oben fuer das eigentliche Routing. */
 
-function openConnModal(id) {
-  editingConnId = id;
-  const conn = config.connections.find((c) => c.id === id);
-  if (!conn) return;
-  $("#cLabel").value = conn.label || "";
-  $("#cThickness").value = conn.thickness || 4;
-  $("#cThicknessVal").textContent = conn.thickness || 4;
-  selectedColor = conn.color || CONNECTION_COLORS[0];
-  $("#cColorPicker").value = selectedColor;
-  $$(".color-swatch").forEach((s) => {
-    s.classList.toggle("selected", s.dataset.color === selectedColor);
-  });
-  $("#connModal").classList.remove("hidden");
-}
-
-$("#cThickness").addEventListener("input", (e) => {
-  $("#cThicknessVal").textContent = e.target.value;
-});
-
-$("#cCancel").addEventListener("click", () => $("#connModal").classList.add("hidden"));
-
-$("#cResetRoute").addEventListener("click", () => {
-  const conn = config.connections.find((c) => c.id === editingConnId);
-  if (!conn) return;
-  conn.waypoints = [];
-  $("#connModal").classList.add("hidden");
-  renderConnections();
-  persistConfig();
-});
-
-$("#cSave").addEventListener("click", () => {
-  const conn = config.connections.find((c) => c.id === editingConnId);
-  if (!conn) return;
-  conn.label = $("#cLabel").value.trim();
-  if (!conn.label) conn.label_at = null;
-  conn.thickness = parseInt($("#cThickness").value, 10);
-  conn.color = selectedColor;
-  $("#connModal").classList.add("hidden");
-  renderConnections();
-  persistConfig();
-});
-
-$("#cDelete").addEventListener("click", () => {
-  config.connections = config.connections.filter((c) => c.id !== editingConnId);
-  $("#connModal").classList.add("hidden");
-  renderConnections();
-  persistConfig();
-});
-
 /* ------------------------------------------------------------------ */
 /* Raster / Einrasten Toggle                                           */
 /* ------------------------------------------------------------------ */
@@ -2176,7 +2138,6 @@ function bindGlobalEvents() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       $("#elementModal").classList.add("hidden");
-      $("#connModal").classList.add("hidden");
       if (connCtxMenuEl) closeConnContextMenu();
       closePortNameEditor();
       if (marqueeState) {

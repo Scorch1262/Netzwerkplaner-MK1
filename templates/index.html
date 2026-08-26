@@ -110,42 +110,6 @@
   </div>
 </div>
 
-<!-- Modal: Verbindung bearbeiten -->
-<div id="connModal" class="modal-overlay hidden">
-  <div class="modal">
-    <h2>Verbindung bearbeiten</h2>
-
-    <label>Bezeichnung
-      <input type="text" id="cLabel" placeholder="z. B. Uplink, 1 GbE, LWL">
-    </label>
-
-    <label>Farbe
-      <div class="color-row" id="colorRow"></div>
-      <div class="color-free-row">
-        <input type="color" id="cColorPicker" value="#3ad6ff">
-        <span class="color-free-label">Freie Farbwahl</span>
-      </div>
-    </label>
-
-    <label>Staerke: <span id="cThicknessVal">4</span> px
-      <input type="range" id="cThickness" min="2" max="14" value="4">
-    </label>
-
-    <p class="modal-hint">Tipp: Der Button „✎" an der Leitung öffnet ein
-      schnelles Menü, um Name, Farbe zu ändern oder die Leitung zu
-      entfernen. Hier im Dialog lassen sich zusätzlich Stärke einstellen
-      und alle Wegpunkte auf einmal zurücksetzen.</p>
-
-    <div class="modal-actions">
-      <button id="cResetRoute" class="btn" title="Alle manuell gesetzten Wegpunkte entfernen">Linie zuruecksetzen</button>
-      <button id="cDelete" class="btn btn-danger">Loeschen</button>
-      <div class="spacer"></div>
-      <button id="cCancel" class="btn">Abbrechen</button>
-      <button id="cSave" class="btn btn-primary">Uebernehmen</button>
-    </div>
-  </div>
-</div>
-
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

@@ -88,7 +88,13 @@ def load_config():
         save_config(DEFAULT_CONFIG)
         return copy.deepcopy(DEFAULT_CONFIG)
     try:
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        # "utf-8-sig" statt "utf-8": Windows-Tools (Notepad, PowerShell
+        # Out-File, etc.) speichern UTF-8-Dateien oft mit einem Byte-Order-
+        # Mark (BOM). Mit reinem "utf-8" wuerde json.load() daran scheitern
+        # und die Konfiguration faelschlich durch die Standardkonfiguration
+        # ersetzt werden - "utf-8-sig" entfernt ein vorhandenes BOM
+        # automatisch und liest Dateien ohne BOM genauso wie zuvor.
+        with open(CONFIG_PATH, "r", encoding="utf-8-sig") as f:
             data = json.load(f)
         # Fehlende Top-Level-Schluessel mit Standardwerten auffuellen
         for key, value in DEFAULT_CONFIG.items():

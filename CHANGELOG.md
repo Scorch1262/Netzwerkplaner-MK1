@@ -2,6 +2,34 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.13.0] – Windows/macOS-Kompatibilität, einheitliches Kontextmenü, Hervorhebung nur im Nutzungsmodus, NAS
+
+- **Behoben – macOS öffnet jetzt auch Windows-`config.json`-Dateien:**
+  Windows-Tools (Notepad, PowerShell `Out-File`, etc.) speichern
+  UTF-8-Dateien oft mit einem Byte-Order-Mark (BOM). Der Server hat
+  solche Dateien bisher **stillschweigend als ungültig verworfen und
+  durch die Standardkonfiguration ersetzt** – ohne Fehlermeldung im
+  Browser. Jetzt wird beim Lesen `utf-8-sig` statt `utf-8` verwendet,
+  was ein vorhandenes BOM automatisch entfernt. Dateien ohne BOM
+  funktionieren unverändert wie bisher.
+- **Kontextmenü vereinheitlicht:** Ein Klick auf eine Leitung (an
+  beliebiger Stelle) öffnet jetzt exakt dasselbe Menü wie ein Klick auf
+  den „✎"-Button – inklusive Name, Farbe, **Stärke-Regler** und
+  **„Linie zurücksetzen"**, die zuvor nur im separaten Volldialog
+  verfügbar waren. Der alte, separate Verbindungs-Dialog wurde
+  vollständig entfernt (kein doppelter Pflegeaufwand mehr, keine
+  UI-Inkonsistenz).
+- **Hervorhebung nur im Nutzungsmodus:** Die Hervorhebung nach Standort
+  (Klick auf die Ortsangabe eines Elements) war fälschlich auch im
+  Bearbeitungsmodus aktiv. Sie funktioniert jetzt – wie die
+  Leitungs-Hervorhebung, die bereits korrekt war – ausschließlich im
+  Nutzungsmodus. Im Bearbeitungsmodus öffnet ein Klick auf eine Leitung
+  stattdessen zuverlässig das Kontextmenü.
+- **Neues Element „NAS"** (Network Attached Storage) mit eigenem Symbol
+  und Farbakzent, verhält sich wie Server/PC (keine Ports).
+- Keine Änderung am Datenformat – bestehende `config.json`-Dateien
+  funktionieren unverändert weiter.
+
 ## [1.12.0] – MQTT-Schaltflächen: Nachrichten direkt aus dem Netzwerkplan versenden
 
 - **Neu:** Schaltflächen an Elementen lassen sich jetzt zusätzlich zu
