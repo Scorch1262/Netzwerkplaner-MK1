@@ -87,6 +87,7 @@ let selectedElementIds = new Set();
 let marqueeState = null; // { startX, startY, el } | null
 let highlightedConnId = null; // im Nutzermodus per Klick hervorgehobene Verbindung
 let highlightedLocation = null; // per Klick auf einen Standort hervorgehobene Elemente (gleicher Ort)
+let searchQuery = ""; // Suchbegriff der Suchzeile (nur UI-Zustand, wird nicht gespeichert)
 let draggingWaypoint = null; // { connId, index } | null
 let draggingLabel = null; // { connId } | null
 let connectMode = false, connectFrom = null; // connectFrom = { id, port } | { id, port: null }
@@ -121,6 +122,7 @@ async function init() {
   $("#chkGrid").checked = config.view?.show_grid ?? true;
   $("#chkSnap").checked = config.view?.snap_to_grid ?? true;
 
+  bindSearch();
   buildPalette();
   buildTypeSelect();
   applyMode();
@@ -464,7 +466,9 @@ function buildElementNode(el) {
   node.style.left = el.x + "px";
   node.style.top = el.y + "px";
   if (selectedElementIds.has(el.id)) node.classList.add("multi-selected");
-  if (highlightedLocation) {
+  if (searchQuery) {
+    node.classList.add(elementMatchesSearch(el, searchQuery) ? "search-match" : "search-dimmed");
+  } else if (highlightedLocation) {
     node.classList.add(el.location === highlightedLocation ? "location-highlighted" : "location-dimmed");
   }
 
@@ -2105,6 +2109,112 @@ async function persistConfig() {
 }
 
 $("#btnSave").addEventListener("click", persistConfig);
+
+/* ------------------------------------------------------------------ */
+/* Suche                                                               */
+/* ------------------------------------------------------------------ */
+
+/* Durchsuchbarer Text eines Elements: Name, Ort, IP/Host, Typ, Portnamen,
+   Beschriftungen/URLs der Schaltflaechen sowie MQTT-Broker und -Topic.
+   Passwoerter werden bewusst NICHT durchsucht. */
+function getSearchableText(el) {
+  const def = ELEMENT_TYPES[el.type] || ELEMENT_TYPES.generic;
+  const parts = [el.name, el.location, getElementHost(el), def.label, el.type];
+  if (Array.isArray(el.port_names)) parts.push(...el.port_names);
+  for (const l of normalizeLinks(el.links)) {
+    parts.push(l.label);
+    if (l.action_type === "mqtt") {
+      if (l.mqtt) parts.push(l.mqtt.broker, l.mqtt.topic);
+    } else {
+      parts.push(l.url);
+    }
+  }
+  return parts.filter((p) => p !== undefined && p !== null && p !== "").join("\n").toLowerCase();
+}
+
+/* Mehrere durch Leerzeichen getrennte Begriffe muessen alle vorkommen (UND). */
+function elementMatchesSearch(el, query) {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (terms.length === 0) return true;
+  const text = getSearchableText(el);
+  return terms.every((t) => text.includes(t));
+}
+
+/* Setzt die Hervorhebung an den vorhandenen Knoten, ohne neu zu rendern
+   (die Eingabe im Suchfeld bleibt dadurch fluessig). */
+function applySearch() {
+  const q = searchQuery.trim();
+  searchQuery = q;
+  const clearBtn = $("#searchClear");
+  if (clearBtn) clearBtn.classList.toggle("hidden", !q);
+  let matches = 0;
+  const total = (config.elements || []).length;
+  for (const el of config.elements || []) {
+    const node = elementLayer.querySelector('.net-element[data-id="' + el.id + '"]');
+    const hit = q ? elementMatchesSearch(el, q) : false;
+    if (hit) matches++;
+    if (!node) continue;
+    node.classList.toggle("search-match", !!q && hit);
+    node.classList.toggle("search-dimmed", !!q && !hit);
+    // Standort-Hervorhebung ruht, solange eine Suche aktiv ist
+    node.classList.remove("location-highlighted", "location-dimmed");
+    if (!q && highlightedLocation) {
+      node.classList.add(el.location === highlightedLocation ? "location-highlighted" : "location-dimmed");
+    }
+  }
+  const counter = $("#searchCount");
+  if (counter) counter.textContent = q ? matches + " / " + total : "";
+  if (q) setStatus(matches + " von " + total + " Elementen gefunden fuer \u201e" + q + "\u201c");
+  else setStatus("Bereit");
+}
+
+function clearSearch() {
+  const input = $("#searchInput");
+  if (input) input.value = "";
+  searchQuery = "";
+  applySearch();
+}
+
+function bindSearch() {
+  const input = $("#searchInput");
+  if (!input) return;
+  input.addEventListener("input", () => {
+    searchQuery = input.value;
+    applySearch();
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      clearSearch();
+      input.blur();
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      // Enter zentriert die Ansicht auf den ersten Treffer
+      const first = (config.elements || []).find((el) => elementMatchesSearch(el, searchQuery.trim() || "\u0000"));
+      if (first && searchQuery.trim()) focusElement(first);
+    }
+  });
+  $("#searchClear").addEventListener("click", () => { clearSearch(); input.focus(); });
+  // Strg+F / Cmd+F fokussiert die Suchzeile (ausser in Eingabefeldern des Dialogs)
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "F")) {
+      e.preventDefault();
+      input.focus();
+      input.select();
+    }
+  });
+}
+
+/* Verschiebt die Ansicht so, dass das Element in der Mitte liegt. */
+function focusElement(el) {
+  const rect = viewport.getBoundingClientRect();
+  const w = typeof DEFAULT_ELEMENT_W === "number" ? DEFAULT_ELEMENT_W : 200;
+  const h = typeof DEFAULT_ELEMENT_H === "number" ? DEFAULT_ELEMENT_H : 100;
+  panX = rect.width / 2 - (el.x + w / 2) * scale;
+  panY = rect.height / 2 - (el.y + h / 2) * scale;
+  applyTransform();
+}
 
 function setStatus(text) {
   $("#statusText").textContent = text;

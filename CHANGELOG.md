@@ -2,6 +2,21 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.14.0] – Suchzeile mit Hervorhebung
+
+- **Neu:** Suchzeile in der Kopfzeile (in Bearbeitungs- und Nutzungsmodus).
+  Durchsucht Name, Ort/Standort, IP/Host, Elementtyp, Portnamen sowie
+  Beschriftungen/URLs der Schaltflächen und MQTT-Broker/-Topic
+  (Passwörter werden nicht durchsucht). Groß-/Kleinschreibung egal.
+- Mehrere Begriffe (durch Leerzeichen getrennt) müssen alle zutreffen
+  (z. B. „serverraum 192.168.1.1").
+- Treffer werden orange hervorgehoben, alle anderen Elemente abgeblendet;
+  Trefferzahl in der Suchzeile und in der Statusleiste.
+- Enter zentriert die Ansicht auf den ersten Treffer, Esc oder ✕ leert die
+  Suche, Strg+F / Cmd+F springt in die Suchzeile.
+- Die Suche ist reiner UI-Zustand – kein Eingriff in das Config-Format,
+  alle bisherigen `config.json`-Dateien bleiben unverändert nutzbar.
+
 ## [1.13.1] – Versionsnummer wird auf der Weboberfläche angezeigt
 
 - **Neu:** Die aktuelle Softwareversion wird jetzt direkt auf der

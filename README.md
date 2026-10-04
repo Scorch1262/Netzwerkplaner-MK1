@@ -177,6 +177,8 @@ solange gültiges JSON erhalten bleibt.
 
 ## 6. Bedienung
 
+**Suche:** Die Suchzeile oben (Strg+F) findet Elemente nach IP, Ort, Name, Typ, Portname oder Schaltflächen-Beschriftung/-URL. Treffer werden orange hervorgehoben, der Rest abgeblendet. Enter zentriert auf den ersten Treffer, Esc leert die Suche.
+
 - **Bearbeitungsmodus** (oben links umschaltbar): Elemente aus der Palette
   hinzufügen, per Drag & Drop verschieben (mit Raster/Einrasten), über den
   Stift-Button (✎) Name/Ort/Typ/Webseiten bearbeiten, über „Verbindung"

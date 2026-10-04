@@ -41,7 +41,16 @@
         </button>
       </div>
 
-      <div class="divider edit-divider"></div>
+      <div class="divider"></div>
+
+      <div class="search-box" title="Suche nach IP, Ort, Name, Typ, Portname, Schaltflaeche (Strg+F)">
+        <span class="search-icon">⌕</span>
+        <input type="search" id="searchInput" placeholder="Suche: IP, Ort, Name …" autocomplete="off" spellcheck="false">
+        <span id="searchCount" class="search-count"></span>
+        <button type="button" id="searchClear" class="search-clear hidden" title="Suche leeren (Esc)">✕</button>
+      </div>
+
+      <div class="divider"></div>
 
       <div class="zoom-controls">
         <button id="btnZoomOut" class="btn btn-icon">−</button>
